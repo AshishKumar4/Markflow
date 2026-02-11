@@ -121,7 +121,6 @@ export function ViewPage() {
         className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 z-[100] origin-left print:hidden"
         style={{ scaleX: scrollProgress }}
       />
-      {!focusMode && <ThemeToggle className="print:hidden" />}
       <AnimatePresence>
         {showAnnotate && !focusMode && (
           <motion.div
@@ -143,7 +142,7 @@ export function ViewPage() {
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             exit={{ y: -100 }}
-            className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl shrink-0 print:hidden"
+            className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl shrink-0 print:hidden"
           >
             <div className="max-w-full mx-auto px-4 h-16 flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
@@ -154,7 +153,7 @@ export function ViewPage() {
                   <span className="truncate text-foreground font-black">{doc.title}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -169,11 +168,12 @@ export function ViewPage() {
                     <SidebarIcon className="w-5 h-5" />
                   </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full hidden md:flex h-9"><Printer className="w-3.5 h-3.5 mr-2" /> Print</Button>
-                <Button variant="outline" size="sm" onClick={handleCopyLink} className="rounded-full h-9">
+                <ThemeToggle className="static" />
+                <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full hidden lg:flex h-9"><Printer className="w-3.5 h-3.5 mr-2" /> Print</Button>
+                <Button variant="outline" size="sm" onClick={handleCopyLink} className="rounded-full h-9 px-3">
                   {copied ? <Check className="w-3.5 h-3.5 mr-2 text-green-500" /> : <Copy className="w-3.5 h-3.5 mr-2" />} <span className="hidden sm:inline">Share</span>
                 </Button>
-                <Button asChild variant="secondary" size="sm" className="rounded-full font-bold h-9"><Link to={`/edit/${doc.id}`}><Edit3 className="w-3.5 h-3.5 mr-2" /> <span className="hidden sm:inline">Edit</span></Link></Button>
+                <Button asChild variant="secondary" size="sm" className="rounded-full font-bold h-9 px-4"><Link to={`/edit/${doc.id}`}><Edit3 className="w-3.5 h-3.5 mr-2" /> <span className="hidden sm:inline">Edit</span></Link></Button>
               </div>
             </div>
           </motion.header>
@@ -181,14 +181,17 @@ export function ViewPage() {
       </AnimatePresence>
       <main className="flex-1 overflow-hidden relative">
         {focusMode && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setFocusMode(false)}
-            className="fixed top-6 right-6 z-50 rounded-full shadow-lg opacity-40 hover:opacity-100 transition-opacity"
-          >
-            <Minimize2 className="w-4 h-4 mr-2" /> Exit Focus
-          </Button>
+          <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity print:hidden">
+            <ThemeToggle className="static" />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setFocusMode(false)}
+              className="rounded-full shadow-lg h-10 px-4 font-bold"
+            >
+              <Minimize2 className="w-4 h-4 mr-2" /> Exit Focus
+            </Button>
+          </div>
         )}
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel id="main-content" order={1} defaultSize={showSidebar ? 70 : 100} minSize={30} className="relative h-full">

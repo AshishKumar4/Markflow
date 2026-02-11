@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { format, isValid } from 'date-fns';
-import { FileText, Loader2, Plus, Calendar, ArrowRight, Search, X, Sparkles, LayoutGrid, RefreshCw } from 'lucide-react';
+import { FileText, Loader2, Plus, Calendar, Search, X, Sparkles, LayoutGrid, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,9 +41,9 @@ export function DocsPage() {
     return q ? docs.filter(d => d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q)) : docs;
   }, [docs, searchQuery]);
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <ThemeToggle className="absolute top-6 right-6 sm:top-12 sm:right-8" />
       <div className="py-8 md:py-12 lg:py-16">
-        <ThemeToggle />
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest">

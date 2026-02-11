@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ export function MarkdownPreview({
   onCommentClick,
   activeCommentId
 }: MarkdownPreviewProps) {
-  const getCommentsForText = (text: string) => {
+  const getCommentsForText = useCallback((text: string) => {
     if (!text || text.length < 3) return [];
     return comments.filter(c => {
       if (!c.position?.text) return false;
@@ -37,7 +37,7 @@ export function MarkdownPreview({
       const cleanBlock = text.toLowerCase();
       return cleanBlock.includes(cleanTarget);
     });
-  };
+  }, [comments]);
   const components = useMemo(() => {
     const BlockWrapper = ({ children }: { children: React.ReactNode }) => {
       const text = getTextContent(children);
@@ -104,7 +104,7 @@ export function MarkdownPreview({
         return <input {...props} />;
       }
     };
-  }, [comments, activeCommentId, onCommentClick]);
+  }, [getCommentsForText, activeCommentId, onCommentClick]);
   return (
     <div className={cn(
       "prose prose-slate dark:prose-invert max-w-none",

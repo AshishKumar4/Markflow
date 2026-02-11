@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 export function HomePage() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <ThemeToggle />
+      <ThemeToggle className="absolute top-6 right-6 sm:top-8 sm:right-8" />
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />

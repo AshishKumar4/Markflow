@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Save, Loader2, ArrowLeft, RotateCcw, Sparkles, FileText, Hash, Clock, CheckCircle2, CircleDashed } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, RotateCcw, FileText, Hash, Clock, CheckCircle2, CircleDashed } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button } from '@/components/ui/button';
@@ -132,8 +132,8 @@ export function EditorPage() {
   }
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-2 sm:gap-4 overflow-hidden">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/80 backdrop-blur-md z-50 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 overflow-hidden min-w-0">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -143,7 +143,7 @@ export function EditorPage() {
               placeholder="Document Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="bg-transparent border-none focus:ring-0 text-base sm:text-lg font-bold w-full max-w-xs placeholder:text-muted-foreground/30"
+              className="bg-transparent border-none focus:ring-0 text-base sm:text-lg font-bold w-full max-w-xs placeholder:text-muted-foreground/30 truncate"
             />
             <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider">
               {isDirty ? (
@@ -154,7 +154,7 @@ export function EditorPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <div className="hidden lg:flex items-center bg-secondary/50 rounded-full p-1 border border-border/50">
             {(['write', 'split', 'preview'] as const).map((mode) => (
               <Button
@@ -209,7 +209,7 @@ export function EditorPage() {
           </div>
         </div>
       </main>
-      <footer className="h-10 border-t border-border bg-card/50 flex items-center justify-between px-6 text-[10px] text-muted-foreground font-bold uppercase tracking-widest z-50">
+      <footer className="h-10 border-t border-border bg-card/50 flex items-center justify-between px-6 text-[10px] text-muted-foreground font-bold uppercase tracking-widest z-50 shrink-0">
         <div className="flex items-center gap-6">
           <span className="flex items-center gap-1.5"><FileText className="w-3 h-3" /> {stats.words} Words</span>
           <span className="flex items-center gap-1.5"><Hash className="w-3 h-3" /> {stats.chars} Chars</span>
