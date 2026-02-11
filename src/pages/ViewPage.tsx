@@ -45,7 +45,7 @@ export function ViewPage() {
         const rect = range.getBoundingClientRect();
         setSelection({
           text: sel.toString().trim(),
-          index: 0, // Simplified index tracking
+          index: range.startOffset,
         });
         setAnnotatePos({
           x: rect.left + rect.width / 2,
@@ -128,8 +128,8 @@ export function ViewPage() {
             style={{ left: annotatePos.x, top: annotatePos.y }}
             className="fixed z-[60] -translate-x-1/2"
           >
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="rounded-full shadow-2xl btn-gradient font-bold h-9 px-4 gap-2"
               onClick={() => {
                 setShowAnnotate(false);
@@ -204,10 +204,10 @@ export function ViewPage() {
         <div ref={contentRef}>
           <MarkdownPreview content={doc.content} proseSize="xl" className="font-sans antialiased" />
         </div>
-        <CommentSection 
-          docId={doc.id} 
-          selection={selection} 
-          onClearSelection={() => setSelection(null)} 
+        <CommentSection
+          docId={doc.id}
+          selection={selection}
+          onClearSelection={() => setSelection(null)}
         />
         <footer className="mt-28 pt-16 border-t border-border/50">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">

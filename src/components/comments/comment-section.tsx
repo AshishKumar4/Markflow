@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Send, Sparkles, User, Mail, X, CornerDownRight, Quote } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,7 +24,7 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
   const [email, setEmail] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       const data = await api<Comment[]>(`/api/comments/${docId}`);
       setComments(data);
@@ -34,10 +34,10 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [docId]);
   useEffect(() => {
     fetchComments();
-  }, [docId]);
+  }, [fetchComments]);
   useEffect(() => {
     if (selection) {
       setReplyTo(null);
@@ -80,10 +80,10 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
       toast.error("Failed to delete comment");
     }
   };
-  const rootComments = useMemo(() => 
-    comments.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt), 
+  const rootComments = useMemo(() =>
+    comments.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt),
   [comments]);
-  const getReplies = (parentId: string) => 
+  const getReplies = (parentId: string) =>
     comments.filter(c => c.parentId === parentId).sort((a, b) => a.createdAt - b.createdAt);
   const replyAuthor = useMemo(() => {
     if (!replyTo) return null;
@@ -119,10 +119,10 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
                     <><Quote className="w-4 h-4" /> Commenting on: "{selection?.text.slice(0, 30)}..."</>
                   )}
                 </div>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   className="h-6 w-6 rounded-full hover:bg-indigo-500/20"
                   onClick={() => { setReplyTo(null); onClearSelection?.(); }}
                 >
@@ -164,8 +164,8 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
               <Sparkles className="w-3 h-3 text-indigo-500" />
               <span>Public Posting</span>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting || !content.trim()}
               className="btn-gradient rounded-xl px-8 shadow-lg shadow-indigo-500/20 font-bold h-11"
             >
@@ -187,9 +187,9 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
           </div>
         ) : (
           rootComments.map(comment => (
-            <CommentItem 
-              key={comment.id} 
-              comment={comment} 
+            <CommentItem
+              key={comment.id}
+              comment={comment}
               replies={getReplies(comment.id)}
               onReply={(id) => {
                 setReplyTo(id);
