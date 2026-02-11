@@ -14,12 +14,18 @@ import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import { EditorPage } from '@/pages/EditorPage'
 import { ViewPage } from '@/pages/ViewPage'
+import { DocsPage } from '@/pages/DocsPage'
 import { Toaster } from '@/components/ui/sonner'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/docs",
+    element: <DocsPage />,
     errorElement: <RouteErrorBoundary />,
   },
   {

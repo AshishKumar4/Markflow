@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Save, Eye, Edit3, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { MarkdownPreview } from '@/components/markdown-preview';
@@ -20,7 +20,7 @@ export function EditorPage() {
   useEffect(() => {
     if (id) {
       setIsLoading(true);
-      api<MarkdownDoc>(`/api/docs/${id}`)
+      api<MarkdownDoc>(`/api/documents/${id}`)
         .then(doc => {
           setTitle(doc.title);
           setContent(doc.content);
@@ -39,7 +39,7 @@ export function EditorPage() {
     }
     setIsSaving(true);
     try {
-      const endpoint = id ? `/api/docs/${id}` : '/api/docs';
+      const endpoint = id ? `/api/documents/${id}` : '/api/documents';
       const method = id ? 'PUT' : 'POST';
       const doc = await api<MarkdownDoc>(endpoint, {
         method,
@@ -49,7 +49,7 @@ export function EditorPage() {
       if (!id) navigate(`/d/${doc.id}`);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to save document");
+      toast.error("Failed to save document. Please check your connection.");
     } finally {
       setIsSaving(false);
     }
@@ -63,7 +63,6 @@ export function EditorPage() {
   }
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      {/* Top Navigation */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50 backdrop-blur-sm z-50">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -79,25 +78,25 @@ export function EditorPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center bg-secondary rounded-lg p-1 mr-2">
-            <Button 
-              variant={viewMode === 'write' ? 'secondary' : 'ghost'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'write' ? 'secondary' : 'ghost'}
+              size="sm"
               onClick={() => setViewMode('write')}
               className={cn("h-8", viewMode === 'write' && "bg-background shadow-sm")}
             >
               Write
             </Button>
-            <Button 
-              variant={viewMode === 'split' ? 'secondary' : 'ghost'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'split' ? 'secondary' : 'ghost'}
+              size="sm"
               onClick={() => setViewMode('split')}
               className={cn("h-8", viewMode === 'split' && "bg-background shadow-sm")}
             >
               Split
             </Button>
-            <Button 
-              variant={viewMode === 'preview' ? 'secondary' : 'ghost'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
+              size="sm"
               onClick={() => setViewMode('preview')}
               className={cn("h-8", viewMode === 'preview' && "bg-background shadow-sm")}
             >
@@ -111,9 +110,7 @@ export function EditorPage() {
           </Button>
         </div>
       </header>
-      {/* Main Workspace */}
       <main className="flex-1 overflow-hidden flex flex-col md:flex-row">
-        {/* Editor Pane */}
         {(viewMode === 'write' || viewMode === 'split') && (
           <div className={cn(
             "flex-1 overflow-y-auto px-4 py-8 md:px-8 bg-background border-r border-border",
@@ -128,7 +125,6 @@ export function EditorPage() {
             />
           </div>
         )}
-        {/* Preview Pane */}
         {(viewMode === 'preview' || viewMode === 'split') && (
           <div className={cn(
             "flex-1 overflow-y-auto px-4 py-8 md:px-12 bg-card",

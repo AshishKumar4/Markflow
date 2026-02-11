@@ -5,13 +5,13 @@ import { ok, bad, notFound, isStr } from './core-utils';
 import type { MarkdownDoc } from "@shared/types";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // DOCUMENTS
-  app.get('/api/docs/:id', async (c) => {
+  app.get('/api/documents/:id', async (c) => {
     const id = c.req.param('id');
     const doc = new DocEntity(c.env, id);
     if (!await doc.exists()) return notFound(c, 'document not found');
     return ok(c, await doc.getState());
   });
-  app.post('/api/docs', async (c) => {
+  app.post('/api/documents', async (c) => {
     const body = await c.req.json() as Partial<MarkdownDoc>;
     const id = body.id || crypto.randomUUID();
     const now = Date.now();
@@ -25,7 +25,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await DocEntity.create(c.env, docData);
     return ok(c, docData);
   });
-  app.put('/api/docs/:id', async (c) => {
+  app.put('/api/documents/:id', async (c) => {
     const id = c.req.param('id');
     const body = await c.req.json() as Partial<MarkdownDoc>;
     const doc = new DocEntity(c.env, id);
@@ -38,7 +38,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }));
     return ok(c, updated);
   });
-  app.get('/api/docs', async (c) => {
+  app.get('/api/documents', async (c) => {
     const cq = c.req.query('cursor');
     const lq = c.req.query('limit');
     const page = await DocEntity.list(c.env, cq ?? null, lq ? Math.max(1, (Number(lq) | 0)) : 20);

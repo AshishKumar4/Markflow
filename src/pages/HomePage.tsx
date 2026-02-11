@@ -8,7 +8,6 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <ThemeToggle />
-      {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
@@ -24,7 +23,7 @@ export function HomePage() {
             <Sparkles className="w-4 h-4" />
             <span>The simplest way to share Markdown</span>
           </motion.div>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -32,7 +31,7 @@ export function HomePage() {
           >
             Mark<span className="text-gradient">Flow</span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -40,39 +39,39 @@ export function HomePage() {
           >
             Write, preview, and publish beautiful documents instantly. No accounts, no clutter, just pure content.
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-4"
           >
-            <Button asChild size="xl" className="btn-gradient rounded-full h-14 px-8 text-lg group">
+            <Button asChild size="lg" className="btn-gradient rounded-full h-14 px-8 text-lg group">
               <Link to="/new">
                 Start Writing
                 <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
-            <Button variant="outline" size="xl" className="rounded-full h-14 px-8 text-lg" asChild>
-              <Link to="/api/docs">View Directory</Link>
+            <Button variant="outline" size="lg" className="rounded-full h-14 px-8 text-lg" asChild>
+              <Link to="/docs">View Directory</Link>
             </Button>
           </motion.div>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.5 }}
             className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl"
           >
-            <FeatureCard 
+            <FeatureCard
               icon={<PenLine className="w-6 h-6" />}
               title="Markdown Studio"
               description="Rich editor with real-time preview and GitHub Flavored Markdown support."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<FileText className="w-6 h-6" />}
               title="Typography First"
               description="Your content rendered with pixel-perfect attention to readability."
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Share2 className="w-6 h-6" />}
               title="Instant Sharing"
               description="Publish with one click and get a permanent, clean URL for your audience."

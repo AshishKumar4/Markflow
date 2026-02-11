@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Edit3, Share, ArrowLeft, Loader2, Copy, Check } from 'lucide-react';
+import { Edit3, ArrowLeft, Loader2, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ export function ViewPage() {
   useEffect(() => {
     if (!id) return;
     setIsLoading(true);
-    api<MarkdownDoc>(`/api/docs/${id}`)
+    api<MarkdownDoc>(`/api/documents/${id}`)
       .then(setDoc)
       .catch(() => toast.error("Document not found"))
       .finally(() => setIsLoading(false));
@@ -48,7 +48,6 @@ export function ViewPage() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <ThemeToggle />
-      {/* Sticky Header */}
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur-md">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
@@ -68,16 +67,15 @@ export function ViewPage() {
           </div>
         </div>
       </header>
-      {/* Content Area */}
       <main className="max-w-3xl mx-auto px-4 py-12 md:py-20 animate-fade-in">
         <header className="mb-12 border-b border-border pb-8">
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 tracking-tight leading-tight">
             {doc.title}
           </h1>
           <div className="flex items-center text-sm text-muted-foreground gap-4">
-            <span>{format(doc.createdAt, 'MMMM d, yyyy')}</span>
+            <span>{doc.createdAt ? format(doc.createdAt, 'MMMM d, yyyy') : 'Recently'}</span>
             <span>•</span>
-            <span>{Math.ceil(doc.content.split(' ').length / 200)} min read</span>
+            <span>{Math.ceil((doc.content?.split(' ').length || 0) / 200)} min read</span>
           </div>
         </header>
         <MarkdownPreview content={doc.content} proseSize="xl" />
@@ -93,7 +91,6 @@ export function ViewPage() {
           </Button>
         </footer>
       </main>
-      {/* Floating Action for Mobile */}
       <div className="fixed bottom-6 right-6 sm:hidden">
         <Button asChild size="icon" className="w-14 h-14 rounded-full shadow-lg btn-gradient">
           <Link to={`/edit/${doc.id}`}>
