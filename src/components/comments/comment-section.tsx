@@ -7,22 +7,23 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CommentItem } from './comment-item';
 import { api } from '@/lib/api-client';
-import { markCommentOwned } from '@/lib/utils';
+import { markCommentOwned, cn, formatQuote } from '@/lib/utils';
 import type { Comment } from '@shared/types';
-import { cn } from '@/lib/utils';
 interface CommentSectionProps {
   docId: string;
   selection?: { text: string; index: number } | null;
   onClearSelection?: () => void;
   activeCommentId?: string | null;
   onClearActive?: () => void;
+  sidebarMode?: boolean;
 }
-export function CommentSection({ 
-  docId, 
-  selection, 
-  onClearSelection, 
-  activeCommentId, 
-  onClearActive 
+export function CommentSection({
+  docId,
+  selection,
+  onClearSelection,
+  activeCommentId,
+  onClearActive,
+  sidebarMode = false
 }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,13 +33,11 @@ export function CommentSection({
   const [email, setEmail] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const commentsListRef = useRef<HTMLDivElement>(null);
   const fetchComments = useCallback(async () => {
     try {
       const data = await api<Comment[]>(`/api/comments/${docId}`);
       setComments(data);
     } catch (err) {
-      console.error(err);
       toast.error("Failed to load comments");
     } finally {
       setIsLoading(false);
@@ -53,12 +52,6 @@ export function CommentSection({
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [selection]);
-  useEffect(() => {
-    if (activeCommentId) {
-      const timer = setTimeout(() => onClearActive?.(), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [activeCommentId, onClearActive]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -105,40 +98,43 @@ export function CommentSection({
     return comments.find(c => c.id === replyTo)?.authorName || 'Anonymous';
   }, [replyTo, comments]);
   return (
-    <section className="mt-20 space-y-10" id="comments">
-      <div className="flex items-center justify-between border-b border-border pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <MessageSquare className="w-5 h-5" />
+    <div className={cn("space-y-6", sidebarMode ? "p-0" : "mt-20")}>
+      {!sidebarMode && (
+        <div className="flex items-center justify-between border-b border-border pb-6">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-2xl font-display font-bold">Discussions</h2>
+            <span className="bg-secondary px-2 py-0.5 rounded-full text-xs font-bold text-muted-foreground">
+              {comments.length}
+            </span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold">Discussions</h2>
-          <span className="bg-secondary px-2.5 py-0.5 rounded-full text-xs font-bold text-muted-foreground border border-border/50">
-            {comments.length}
-          </span>
         </div>
-      </div>
-      <div ref={formRef} className="bg-card/30 rounded-3xl p-6 sm:p-8 border border-border/50 shadow-sm space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
+      )}
+      <div ref={formRef} className={cn(
+        "bg-card/30 rounded-2xl border border-border/50 shadow-sm overflow-hidden",
+        sidebarMode ? "p-4" : "p-6 sm:p-8"
+      )}>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <AnimatePresence mode="popLayout">
             {(replyTo || selection) && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl text-sm"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[11px]"
               >
-                <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 font-medium">
+                <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 font-medium truncate">
                   {replyTo ? (
-                    <><CornerDownRight className="w-4 h-4" /> Replying to {replyAuthor}</>
+                    <><CornerDownRight className="w-3 h-3" /> Replying to {replyAuthor}</>
                   ) : (
-                    <><Quote className="w-4 h-4" /> Commenting on: "{selection?.text.slice(0, 30)}..."</>
+                    <><Quote className="w-3 h-3" /> {formatQuote(selection?.text || "", 30)}</>
                   )}
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 rounded-full hover:bg-indigo-500/20"
+                  className="h-5 w-5 rounded-full"
                   onClick={() => { setReplyTo(null); onClearSelection?.(); }}
                 >
                   <X className="w-3 h-3" />
@@ -149,56 +145,42 @@ export function CommentSection({
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your thoughts or feedback..."
-            className="min-h-[120px] bg-secondary/30 border-border/50 rounded-2xl focus:ring-indigo-500/20 focus:border-indigo-500/50 resize-none text-base"
+            placeholder="Feedback..."
+            className="min-h-[80px] bg-secondary/30 border-border/50 rounded-xl focus:ring-0 resize-none text-sm"
             required
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="relative group">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+          <div className="grid grid-cols-1 gap-2">
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                placeholder="Name (Optional)"
+                placeholder="Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-10 bg-secondary/30 border-border/50 rounded-xl"
-              />
-            </div>
-            <div className="relative group">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
-              <Input
-                placeholder="Email for Gravatar (Optional)"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 bg-secondary/30 border-border/50 rounded-xl"
+                className="pl-9 h-9 bg-secondary/30 border-border/50 rounded-lg text-xs"
               />
             </div>
           </div>
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              <Sparkles className="w-3 h-3 text-indigo-500" />
-              <span>Public Posting</span>
-            </div>
+          <div className="flex items-center justify-end">
             <Button
               type="submit"
               disabled={isSubmitting || !content.trim()}
-              className="btn-gradient rounded-xl px-8 shadow-lg shadow-indigo-500/20 font-bold h-11"
+              size="sm"
+              className="btn-gradient rounded-lg px-4 font-bold h-9"
             >
-              {isSubmitting ? "Posting..." : "Post Comment"}
-              <Send className="ml-2 w-4 h-4" />
+              Post <Send className="ml-2 w-3.5 h-3.5" />
             </Button>
           </div>
         </form>
       </div>
-      <div className="space-y-8" ref={commentsListRef}>
+      <div className="space-y-4">
         {isLoading ? (
-          <div className="space-y-6">
-            {[1, 2].map(i => <div key={i} className="h-32 bg-muted/30 animate-pulse rounded-2xl" />)}
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-muted/30 animate-pulse rounded-xl" />)}
           </div>
         ) : rootComments.length === 0 ? (
-          <div className="text-center py-20 bg-secondary/20 rounded-[2rem] border-2 border-dashed border-border/40">
-            <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground font-medium">No discussions yet. Be the first to speak up!</p>
+          <div className="text-center py-12 bg-secondary/10 rounded-2xl border-2 border-dashed border-border/40">
+            <MessageSquare className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-muted-foreground text-xs">No comments yet.</p>
           </div>
         ) : (
           rootComments.map(comment => (
@@ -207,16 +189,12 @@ export function CommentSection({
               comment={comment}
               replies={getReplies(comment.id)}
               isHighlighted={activeCommentId === comment.id}
-              onReply={(id) => {
-                setReplyTo(id);
-                onClearSelection?.();
-                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }}
+              onReply={setReplyTo}
               onDelete={handleDelete}
             />
           ))
         )}
       </div>
-    </section>
+    </div>
   );
 }
