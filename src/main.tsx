@@ -12,24 +12,39 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
-
+import { EditorPage } from '@/pages/EditorPage'
+import { ViewPage } from '@/pages/ViewPage'
+import { Toaster } from '@/components/ui/sonner'
 const queryClient = new QueryClient();
-
 const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
     errorElement: <RouteErrorBoundary />,
   },
+  {
+    path: "/new",
+    element: <EditorPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/edit/:id",
+    element: <EditorPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/d/:id",
+    element: <ViewPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
 ]);
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <RouterProvider router={router} />
+        <Toaster position="bottom-right" richColors closeButton />
       </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
 )
-   
