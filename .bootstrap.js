@@ -82,7 +82,8 @@ function runSetupCommands() {
     "bun add remark-gfm@^4.0.0",
     "bun add react-textarea-autosize@^8.5.0",
     "bun add @tailwindcss/typography@^0.5.10",
-    "bun add @radix-ui/react-avatar"
+    "bun add @radix-ui/react-avatar",
+    "bun add react-hotkeys-hook@^5.1.0"
 ];
     
     if (commands.length === 0) {
