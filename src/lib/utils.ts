@@ -38,14 +38,20 @@ export function formatQuote(text: string, maxLength: number = 60): string {
   return text.slice(0, maxLength).trim() + "...";
 }
 /**
- * Calculates vertical scroll progress
+ * Calculates scroll progress for a specific element or the document.
  */
-export function getScrollPercentage() {
+export function getScrollPercentage(element?: HTMLElement | null) {
+  if (element) {
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    if (scrollHeight <= clientHeight) return 0;
+    return scrollTop / (scrollHeight - clientHeight);
+  }
   const h = document.documentElement;
   const b = document.body;
   const st = 'scrollTop';
   const sh = 'scrollHeight';
-  return (h[st] || b[st]) / ((h[sh] || b[sh]) - h.clientHeight);
+  const progress = (h[st] || b[st]) / ((h[sh] || b[sh]) - h.clientHeight);
+  return isFinite(progress) ? progress : 0;
 }
 /**
  * Copy text to clipboard with feedback support

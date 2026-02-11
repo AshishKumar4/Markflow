@@ -42,9 +42,9 @@ export function ViewPage() {
           api<MarkdownDoc>(`/api/documents/${id}`),
           api<Comment[]>(`/api/comments/${id}`).catch(() => [] as Comment[])
         ]);
-        if (isMounted) { 
-          setDoc(docData); 
-          setComments(commentsData); 
+        if (isMounted) {
+          setDoc(docData);
+          setComments(commentsData);
         }
       } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : "Failed to load document");
@@ -62,19 +62,25 @@ export function ViewPage() {
         setSelection({ text: sel.toString().trim(), index: range.startOffset });
         setAnnotatePos({ x: rect.left + rect.width / 2, y: rect.top + window.scrollY - 48 });
         setShowAnnotate(true);
-      } else { 
-        setShowAnnotate(false); 
+      } else {
+        setShowAnnotate(false);
       }
     };
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 500);
-      setScrollProgress(getScrollPercentage());
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      setShowScrollTop(target.scrollTop > 500);
+      setScrollProgress(getScrollPercentage(target));
     };
+    const container = scrollContainerRef.current;
     document.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('scroll', handleScroll);
-    return () => { 
-      document.removeEventListener('mouseup', handleMouseUp); 
-      window.removeEventListener('scroll', handleScroll); 
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
     };
   }, []);
   const readingTime = useMemo(() => {
@@ -87,7 +93,6 @@ export function ViewPage() {
     setShowAnnotate(false);
   };
   const handleIndicatorClick = (cid: string) => {
-    // Clear any existing selection to focus on the comment thread
     window.getSelection()?.removeAllRanges();
     setSelection(null);
     setActiveCommentId(cid);
@@ -109,20 +114,21 @@ export function ViewPage() {
       <Button asChild className="rounded-full mt-4"><Link to="/">Go Home</Link></Button>
     </div>
   );
+  const showSidebar = !isMobile && sidebarOpen && !focusMode;
   return (
     <div className={cn("h-screen flex flex-col overflow-hidden bg-background", focusMode && "bg-slate-50 dark:bg-slate-950")}>
-      <motion.div 
-        className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 z-[100] origin-left print:hidden" 
-        style={{ scaleX: scrollProgress }} 
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 z-[100] origin-left print:hidden"
+        style={{ scaleX: scrollProgress }}
       />
       {!focusMode && <ThemeToggle className="print:hidden" />}
       <AnimatePresence>
         {showAnnotate && !focusMode && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            exit={{ opacity: 0 }} 
-            style={{ left: annotatePos.x, top: annotatePos.y }} 
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ left: annotatePos.x, top: annotatePos.y }}
             className="fixed z-[100] -translate-x-1/2 print:hidden pointer-events-auto"
           >
             <Button size="sm" className="rounded-full shadow-2xl btn-gradient font-bold h-9 px-4" onClick={handleAnnotate}>
@@ -133,7 +139,7 @@ export function ViewPage() {
       </AnimatePresence>
       <AnimatePresence>
         {!focusMode && (
-          <motion.header 
+          <motion.header
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             exit={{ y: -100 }}
@@ -149,10 +155,10 @@ export function ViewPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setFocusMode(true)} 
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFocusMode(true)}
                   className="rounded-full"
                   title="Focus Mode"
                 >
@@ -175,49 +181,51 @@ export function ViewPage() {
       </AnimatePresence>
       <main className="flex-1 overflow-hidden relative">
         {focusMode && (
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            onClick={() => setFocusMode(false)} 
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setFocusMode(false)}
             className="fixed top-6 right-6 z-50 rounded-full shadow-lg opacity-40 hover:opacity-100 transition-opacity"
           >
             <Minimize2 className="w-4 h-4 mr-2" /> Exit Focus
           </Button>
         )}
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={70} minSize={30} className="relative h-full overflow-y-auto" ref={scrollContainerRef}>
-            <div className={cn("max-w-3xl mx-auto px-6 py-12 md:py-24 transition-all duration-700", focusMode ? "max-w-4xl" : "")}>
-              <div className="mb-14">
-                <h1 className="text-4xl md:text-6xl font-display font-black mb-6 tracking-tight leading-tight">{doc.title}</h1>
-                <div className="flex flex-wrap items-center text-xs font-bold text-muted-foreground gap-6 uppercase tracking-widest">
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500" /> {isValid(new Date(doc.createdAt)) ? format(new Date(doc.createdAt), 'MMMM d, yyyy') : 'Recently'}</div>
-                  <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> {readingTime} min read</div>
+          <ResizablePanel id="main-content" order={1} defaultSize={showSidebar ? 70 : 100} minSize={30} className="relative h-full">
+            <div className="h-full overflow-y-auto" ref={scrollContainerRef}>
+              <div className={cn("max-w-3xl mx-auto px-6 py-12 md:py-24 transition-all duration-700", focusMode ? "max-w-4xl" : "")}>
+                <div className="mb-14">
+                  <h1 className="text-4xl md:text-6xl font-display font-black mb-6 tracking-tight leading-tight">{doc.title}</h1>
+                  <div className="flex flex-wrap items-center text-xs font-bold text-muted-foreground gap-6 uppercase tracking-widest">
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500" /> {isValid(new Date(doc.createdAt)) ? format(new Date(doc.createdAt), 'MMMM d, yyyy') : 'Recently'}</div>
+                    <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> {readingTime} min read</div>
+                  </div>
+                </div>
+                <div ref={contentRef} className="print:text-black mb-48">
+                  <MarkdownPreview
+                    content={doc.content}
+                    proseSize={focusMode ? "xl" : "lg"}
+                    comments={comments}
+                    activeCommentId={activeCommentId}
+                    onCommentClick={handleIndicatorClick}
+                  />
                 </div>
               </div>
-              <div ref={contentRef} className="print:text-black mb-48">
-                <MarkdownPreview
-                  content={doc.content}
-                  proseSize={focusMode ? "xl" : "lg"}
-                  comments={comments}
-                  activeCommentId={activeCommentId}
-                  onCommentClick={handleIndicatorClick}
-                />
-              </div>
+              <AnimatePresence>
+                {showScrollTop && (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed bottom-10 right-10 z-40 print:hidden">
+                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12 bg-background/80 backdrop-blur-md shadow-xl" onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
+                      <ArrowUp className="w-5 h-5" />
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <AnimatePresence>
-              {showScrollTop && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed bottom-10 right-10 z-40 print:hidden">
-                  <Button variant="outline" size="icon" className="rounded-full w-12 h-12 bg-background/80 backdrop-blur-md shadow-xl" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                    <ArrowUp className="w-5 h-5" />
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </ResizablePanel>
-          {!isMobile && sidebarOpen && !focusMode && (
+          {showSidebar && (
             <>
               <ResizableHandle withHandle className="w-1 bg-border/40 hover:bg-indigo-500/20 transition-colors" />
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="min-w-[320px]">
+              <ResizablePanel id="comment-sidebar" order={2} defaultSize={30} minSize={20} maxSize={50} className="min-w-[320px]">
                 <CommentSidebar
                   isOpen={sidebarOpen}
                   onClose={() => setSidebarOpen(false)}

@@ -51,8 +51,10 @@ export function CommentSection({
     if (selection) {
       setReplyTo(null);
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Give time for scroll animation before focusing
-      setTimeout(() => textareaRef.current?.focus(), 300);
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 400);
+      return () => clearTimeout(timer);
     }
   }, [selection]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,9 +104,10 @@ export function CommentSection({
   }, [replyTo, comments]);
   return (
     <div className={cn("space-y-6", sidebarMode ? "p-0" : "mt-20")}>
-      <motion.div 
+      <motion.div
         layout
-        ref={formRef} 
+        ref={formRef}
+        animate={activeCommentId ? { scale: [1, 1.01, 1] } : {}}
         className={cn(
           "bg-card/40 rounded-2xl border transition-all duration-500 overflow-hidden",
           selection ? "border-indigo-500/50 ring-4 ring-indigo-500/5 shadow-xl" : "border-border/50",
@@ -170,7 +173,7 @@ export function CommentSection({
       <div className="space-y-4 relative">
         <AnimatePresence>
           {activeCommentId && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
