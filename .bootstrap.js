@@ -78,7 +78,7 @@ function updateWranglerJsonc() {
 
 function runSetupCommands() {
     const commands = [
-    "bun add react-markdown@^9.0.1",
+    "bun add react-markdown@^9.0.1 remark-gfm@^4.0.0 react-textarea-autosize@^8.5.0 @tailwindcss/typography@^0.5.10 react-hotkeys-hook@^5.1.0",
     "bun add remark-gfm@^4.0.0",
     "bun add react-textarea-autosize@^8.5.0",
     "bun add @tailwindcss/typography@^0.5.10",
