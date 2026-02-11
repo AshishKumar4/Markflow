@@ -1,33 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Reply, Trash2, User as UserIcon, CornerDownRight, Quote } from 'lucide-react';
+import { Reply, Trash2, User as UserIcon, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { getGravatarUrl, isCommentOwned } from '@/lib/utils';
+import { getGravatarUrl, isCommentOwned, cn } from '@/lib/utils';
 import type { Comment } from '@shared/types';
-import { cn } from '@/lib/utils';
 interface CommentItemProps {
   comment: Comment;
   replies?: Comment[];
   onReply: (parentId: string) => void;
   onDelete: (id: string) => void;
   depth?: number;
+  isHighlighted?: boolean;
 }
-export function CommentItem({ comment, replies = [], onReply, onDelete, depth = 0 }: CommentItemProps) {
-  const [isHovered, setIsHovered] = useState(false);
+export function CommentItem({ 
+  comment, 
+  replies = [], 
+  onReply, 
+  onDelete, 
+  depth = 0,
+  isHighlighted = false
+}: CommentItemProps) {
+  const itemRef = useRef<HTMLDivElement>(null);
   const gravatar = comment.authorEmail ? getGravatarUrl(comment.authorEmail) : null;
   const isOwner = isCommentOwned(comment.id);
+  useEffect(() => {
+    if (isHighlighted && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isHighlighted]);
   return (
-    <div className={cn("space-y-4", depth > 0 ? "ml-6 sm:ml-12 border-l border-border/40 pl-4 sm:pl-6" : "")}>
+    <div 
+      ref={itemRef}
+      className={cn("space-y-4", depth > 0 ? "ml-6 sm:ml-12 border-l border-border/40 pl-4 sm:pl-6" : "")}
+    >
       <motion.div
         initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        animate={{ 
+          opacity: 1, 
+          x: 0,
+          scale: isHighlighted ? 1.02 : 1,
+        }}
+        transition={{ duration: 0.3 }}
       >
-        <Card className="p-4 sm:p-5 border-border/50 bg-card/40 backdrop-blur-sm hover:border-indigo-500/30 transition-all duration-300">
+        <Card className={cn(
+          "p-4 sm:p-5 border-border/50 bg-card/40 backdrop-blur-sm transition-all duration-300",
+          isHighlighted ? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/20 border-indigo-500" : "hover:border-indigo-500/30"
+        )}>
           <div className="flex gap-4">
             <Avatar className="h-10 w-10 shrink-0 border border-border shadow-sm">
               {gravatar ? <AvatarImage src={gravatar} /> : null}
@@ -46,18 +67,18 @@ export function CommentItem({ comment, replies = [], onReply, onDelete, depth = 
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 rounded-full text-muted-foreground hover:text-indigo-600 hover:bg-indigo-500/5"
                     onClick={() => onReply(comment.id)}
                   >
                     <Reply className="h-4 w-4" />
                   </Button>
                   {isOwner && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                       onClick={() => onDelete(comment.id)}
                     >
@@ -83,12 +104,13 @@ export function CommentItem({ comment, replies = [], onReply, onDelete, depth = 
         {replies.length > 0 && (
           <div className="space-y-4">
             {replies.map((reply) => (
-              <CommentItem 
-                key={reply.id} 
-                comment={reply} 
-                onReply={onReply} 
-                onDelete={onDelete} 
-                depth={depth + 1} 
+              <CommentItem
+                key={reply.id}
+                comment={reply}
+                onReply={onReply}
+                onDelete={onDelete}
+                depth={depth + 1}
+                isHighlighted={isHighlighted}
               />
             ))}
           </div>

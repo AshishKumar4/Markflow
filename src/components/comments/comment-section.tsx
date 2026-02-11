@@ -14,8 +14,16 @@ interface CommentSectionProps {
   docId: string;
   selection?: { text: string; index: number } | null;
   onClearSelection?: () => void;
+  activeCommentId?: string | null;
+  onClearActive?: () => void;
 }
-export function CommentSection({ docId, selection, onClearSelection }: CommentSectionProps) {
+export function CommentSection({ 
+  docId, 
+  selection, 
+  onClearSelection, 
+  activeCommentId, 
+  onClearActive 
+}: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +32,7 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
   const [email, setEmail] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const commentsListRef = useRef<HTMLDivElement>(null);
   const fetchComments = useCallback(async () => {
     try {
       const data = await api<Comment[]>(`/api/comments/${docId}`);
@@ -44,6 +53,12 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [selection]);
+  useEffect(() => {
+    if (activeCommentId) {
+      const timer = setTimeout(() => onClearActive?.(), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeCommentId, onClearActive]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -175,7 +190,7 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
           </div>
         </form>
       </div>
-      <div className="space-y-8">
+      <div className="space-y-8" ref={commentsListRef}>
         {isLoading ? (
           <div className="space-y-6">
             {[1, 2].map(i => <div key={i} className="h-32 bg-muted/30 animate-pulse rounded-2xl" />)}
@@ -191,6 +206,7 @@ export function CommentSection({ docId, selection, onClearSelection }: CommentSe
               key={comment.id}
               comment={comment}
               replies={getReplies(comment.id)}
+              isHighlighted={activeCommentId === comment.id}
               onReply={(id) => {
                 setReplyTo(id);
                 onClearSelection?.();

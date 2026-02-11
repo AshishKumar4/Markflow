@@ -8,33 +8,42 @@ import { MarkdownPreview } from '@/components/markdown-preview';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CommentSection } from '@/components/comments/comment-section';
 import { api } from '@/lib/api-client';
-import type { MarkdownDoc } from '@shared/types';
+import type { MarkdownDoc, Comment } from '@shared/types';
 import { motion, AnimatePresence } from 'framer-motion';
 export function ViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [doc, setDoc] = useState<MarkdownDoc | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [copiedRaw, setCopiedRaw] = useState(false);
   const [selection, setSelection] = useState<{ text: string; index: number } | null>(null);
   const [showAnnotate, setShowAnnotate] = useState(false);
   const [annotatePos, setAnnotatePos] = useState({ x: 0, y: 0 });
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
     setIsLoading(true);
-    api<MarkdownDoc>(`/api/documents/${id}`)
-      .then(data => {
-        if (isMounted) setDoc(data);
-      })
-      .catch(() => {
+    const loadData = async () => {
+      try {
+        const [docData, commentsData] = await Promise.all([
+          api<MarkdownDoc>(`/api/documents/${id}`),
+          api<Comment[]>(`/api/comments/${id}`)
+        ]);
+        if (isMounted) {
+          setDoc(docData);
+          setComments(commentsData);
+        }
+      } catch (err) {
         if (isMounted) toast.error("Document not found");
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) setIsLoading(false);
-      });
+      }
+    };
+    loadData();
     return () => { isMounted = false; };
   }, [id]);
   useEffect(() => {
@@ -59,6 +68,10 @@ export function ViewPage() {
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
+  const handleMarkerClick = (commentId: string) => {
+    setActiveCommentId(commentId);
+    document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' });
+  };
   const readingTime = useMemo(() => {
     if (!doc?.content) return 0;
     const words = doc.content.trim().split(/\s+/).length;
@@ -195,56 +208,25 @@ export function ViewPage() {
               <Clock className="w-4 h-4" />
               <span>{readingTime} min read</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FileCode className="w-4 h-4" />
-              <span>Markdown</span>
-            </div>
           </div>
         </div>
         <div ref={contentRef}>
-          <MarkdownPreview content={doc.content} proseSize="xl" className="font-sans antialiased" />
+          <MarkdownPreview 
+            content={doc.content} 
+            proseSize="xl" 
+            className="font-sans antialiased" 
+            comments={comments}
+            onCommentClick={handleMarkerClick}
+          />
         </div>
         <CommentSection
           docId={doc.id}
           selection={selection}
           onClearSelection={() => setSelection(null)}
+          activeCommentId={activeCommentId}
+          onClearActive={() => setActiveCommentId(null)}
         />
-        <footer className="mt-28 pt-16 border-t border-border/50">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-            <div className="space-y-4 text-center md:text-left">
-              <Link to="/" className="flex items-center justify-center md:justify-start gap-2.5 group">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">M</div>
-                <h2 className="text-3xl font-display font-bold tracking-tight">
-                  Mark<span className="text-indigo-600">Flow</span>
-                </h2>
-              </Link>
-              <p className="text-muted-foreground max-w-sm text-lg leading-relaxed font-medium">
-                The fastest way to write and publish beautiful Markdown documents.
-              </p>
-            </div>
-            <div className="flex flex-col items-center md:items-end gap-5">
-              <Button asChild className="btn-gradient rounded-full px-10 h-14 text-base font-bold shadow-2xl shadow-indigo-500/30">
-                <Link to="/new">Create your own</Link>
-              </Button>
-              <Button asChild variant="ghost" className="text-muted-foreground hover:text-indigo-600 hover:bg-indigo-500/5 font-bold gap-2 rounded-full">
-                <Link to="/"><Home className="w-4 h-4" /> Go to Home</Link>
-              </Button>
-            </div>
-          </div>
-        </footer>
       </motion.main>
-      <AnimatePresence>
-        <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="fixed bottom-8 right-8 flex flex-col gap-4 sm:hidden z-50">
-           <Button onClick={handleCopyRaw} size="icon" className="w-14 h-14 rounded-full shadow-2xl bg-card border border-border text-foreground hover:bg-accent">
-              {copiedRaw ? <Check className="w-6 h-6 text-green-500" /> : <FileCode className="w-6 h-6" />}
-           </Button>
-           <Button asChild size="icon" className="w-14 h-14 rounded-full shadow-2xl btn-gradient">
-            <Link to={`/edit/${doc.id}`}>
-              <Edit3 className="w-6 h-6" />
-            </Link>
-          </Button>
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 }
