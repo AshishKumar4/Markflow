@@ -42,7 +42,7 @@ export function DocsPage() {
   }, [docs, searchQuery]);
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-      <ThemeToggle className="absolute top-6 right-6 sm:top-12 sm:right-8" />
+      <ThemeToggle className="hidden sm:flex absolute top-12 right-8" />
       <div className="py-8 md:py-12 lg:py-16">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
           <div className="space-y-3">
@@ -51,17 +51,20 @@ export function DocsPage() {
             </div>
             <h1 className="text-4xl sm:text-5xl font-display font-black tracking-tight">Directory</h1>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            <div className="relative group flex-1 sm:w-80">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full md:w-auto items-center sm:items-end">
+            <div className="relative group w-full sm:w-64 lg:w-80">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500" />
               <Input placeholder="Search docs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-11 h-12 bg-secondary/50 rounded-2xl" />
               {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5"><X className="w-4 h-4 text-muted-foreground" /></button>}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={() => fetchDocs(null, true)} disabled={refreshing} className="h-12 w-12 rounded-2xl">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="icon" onClick={() => fetchDocs(null, true)} disabled={refreshing} className="h-12 w-12 rounded-2xl shrink-0">
                 <RefreshCw className={cn("w-5 h-5", refreshing && "animate-spin")} />
               </Button>
-              <Button asChild className="btn-gradient rounded-2xl h-12 px-6 font-bold shadow-indigo-500/20"><Link to="/new"><Plus className="w-5 h-5 mr-2" /> New</Link></Button>
+              <ThemeToggle className="sm:hidden h-12 w-12 rounded-2xl bg-secondary/50 border" />
+              <Button asChild className="btn-gradient rounded-2xl h-12 px-6 font-bold shadow-indigo-500/20 flex-1 sm:flex-none">
+                <Link to="/new"><Plus className="w-5 h-5 mr-2" /> New</Link>
+              </Button>
             </div>
           </div>
         </header>

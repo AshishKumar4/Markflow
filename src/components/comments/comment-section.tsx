@@ -50,11 +50,13 @@ export function CommentSection({
   useEffect(() => {
     if (selection) {
       setReplyTo(null);
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const timer = setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 400);
-      return () => clearTimeout(timer);
+      // Wait for sidebar animation and layout shift
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        requestAnimationFrame(() => {
+          textareaRef.current?.focus();
+        });
+      }, 300);
     }
   }, [selection]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,9 +109,8 @@ export function CommentSection({
       <motion.div
         layout
         ref={formRef}
-        animate={activeCommentId ? { scale: [1, 1.01, 1] } : {}}
         className={cn(
-          "bg-card/40 rounded-2xl border transition-all duration-500 overflow-hidden",
+          "bg-card/40 rounded-2xl border transition-all duration-500 overflow-hidden scroll-mt-20",
           selection ? "border-indigo-500/50 ring-4 ring-indigo-500/5 shadow-xl" : "border-border/50",
           sidebarMode ? "p-4" : "p-6 sm:p-8"
         )}

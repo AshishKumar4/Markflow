@@ -60,7 +60,8 @@ export function ViewPage() {
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         setSelection({ text: sel.toString().trim(), index: range.startOffset });
-        setAnnotatePos({ x: rect.left + rect.width / 2, y: rect.top + window.scrollY - 48 });
+        // Fixed positioning uses viewport coordinates, rect.top is already viewport-relative
+        setAnnotatePos({ x: rect.left + rect.width / 2, y: rect.top - 48 });
         setShowAnnotate(true);
       } else {
         setShowAnnotate(false);
@@ -193,7 +194,8 @@ export function ViewPage() {
             </Button>
           </div>
         )}
-        <ResizablePanelGroup direction="horizontal">
+        {/* Force re-render of panel group on sidebar toggle to avoid normalization artifacts */}
+        <ResizablePanelGroup direction="horizontal" key={showSidebar ? 'sidebar-on' : 'sidebar-off'}>
           <ResizablePanel id="main-content" order={1} defaultSize={showSidebar ? 70 : 100} minSize={30} className="relative h-full">
             <div className="h-full overflow-y-auto" ref={scrollContainerRef}>
               <div className={cn("max-w-3xl mx-auto px-6 py-12 md:py-24 transition-all duration-700", focusMode ? "max-w-4xl" : "")}>

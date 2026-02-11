@@ -132,7 +132,7 @@ export function EditorPage() {
   }
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/80 backdrop-blur-md z-50 shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/80 backdrop-blur-md z-[70] shrink-0">
         <div className="flex items-center gap-2 sm:gap-4 overflow-hidden min-w-0">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 rounded-full">
             <ArrowLeft className="w-5 h-5" />
@@ -193,7 +193,7 @@ export function EditorPage() {
       </AnimatePresence>
       <main className="flex-1 overflow-hidden flex flex-col md:flex-row relative">
         <div className={cn("flex-1 overflow-y-auto flex flex-col", viewMode === 'preview' ? "hidden lg:flex" : "flex", viewMode === 'write' ? "w-full" : "w-full md:w-1/2")}>
-          <div className={cn("flex-1 px-4 py-10 md:px-8 lg:px-12", viewMode === 'write' ? "max-w-4xl mx-auto w-full" : "")}>
+          <div className={cn("flex-1 px-4 pt-10 pb-32 md:pb-10 md:px-8 lg:px-12", viewMode === 'write' ? "max-w-4xl mx-auto w-full" : "")}>
             <TextareaAutosize
               autoFocus
               value={content}
@@ -204,7 +204,7 @@ export function EditorPage() {
           </div>
         </div>
         <div className={cn("flex-1 overflow-y-auto bg-slate-50/30 dark:bg-slate-900/10 border-l border-border", viewMode === 'write' ? "hidden lg:flex" : "flex", viewMode === 'preview' ? "w-full" : "w-full md:w-1/2")}>
-          <div className={cn("flex-1 px-6 py-10 md:px-12 lg:px-16", viewMode === 'preview' ? "max-w-4xl mx-auto w-full" : "")}>
+          <div className={cn("flex-1 px-6 pt-10 pb-32 md:pb-10 md:px-12 lg:px-16", viewMode === 'preview' ? "max-w-4xl mx-auto w-full" : "")}>
             <MarkdownPreview content={content} proseSize="lg" />
           </div>
         </div>
@@ -217,7 +217,7 @@ export function EditorPage() {
         </div>
         <div className="hidden sm:block">Press <kbd className="bg-muted px-1.5 py-0.5 rounded border border-border">Ctrl+S</kbd> to save</div>
       </footer>
-      <div className="lg:hidden fixed bottom-14 left-1/2 -translate-x-1/2 bg-card/90 border border-border shadow-2xl rounded-full p-1.5 flex items-center gap-1 z-50 backdrop-blur-xl">
+      <div className="lg:hidden fixed bottom-14 left-1/2 -translate-x-1/2 bg-card/90 border border-border shadow-2xl rounded-full p-1.5 flex items-center gap-1 z-[60] backdrop-blur-xl">
         {(['write', 'split', 'preview'] as const).map((mode) => (
           <Button key={mode} variant="ghost" size="sm" onClick={() => setViewMode(mode)} className={cn("h-10 px-5 rounded-full text-xs font-bold", viewMode === mode ? "bg-indigo-600 text-white" : "text-muted-foreground")}>
             {mode === 'write' ? 'Write' : mode === 'preview' ? 'View' : 'Split'}
