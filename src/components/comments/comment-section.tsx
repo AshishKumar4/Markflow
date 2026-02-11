@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, Sparkles, User, Mail, X, CornerDownRight, Quote } from 'lucide-react';
+import { MessageSquare, Send, User, X, CornerDownRight, Quote, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ export function CommentSection({
   const [email, setEmail] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetchComments = useCallback(async () => {
     try {
       const data = await api<Comment[]>(`/api/comments/${docId}`);
@@ -50,6 +51,8 @@ export function CommentSection({
     if (selection) {
       setReplyTo(null);
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Give time for scroll animation before focusing
+      setTimeout(() => textareaRef.current?.focus(), 300);
     }
   }, [selection]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,35 +102,29 @@ export function CommentSection({
   }, [replyTo, comments]);
   return (
     <div className={cn("space-y-6", sidebarMode ? "p-0" : "mt-20")}>
-      {!sidebarMode && (
-        <div className="flex items-center justify-between border-b border-border pb-6">
-          <div className="flex items-center gap-3">
-            <MessageSquare className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-2xl font-display font-bold">Discussions</h2>
-            <span className="bg-secondary px-2 py-0.5 rounded-full text-xs font-bold text-muted-foreground">
-              {comments.length}
-            </span>
-          </div>
-        </div>
-      )}
-      <div ref={formRef} className={cn(
-        "bg-card/30 rounded-2xl border border-border/50 shadow-sm overflow-hidden",
-        sidebarMode ? "p-4" : "p-6 sm:p-8"
-      )}>
+      <motion.div 
+        layout
+        ref={formRef} 
+        className={cn(
+          "bg-card/40 rounded-2xl border transition-all duration-500 overflow-hidden",
+          selection ? "border-indigo-500/50 ring-4 ring-indigo-500/5 shadow-xl" : "border-border/50",
+          sidebarMode ? "p-4" : "p-6 sm:p-8"
+        )}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <AnimatePresence mode="popLayout">
             {(replyTo || selection) && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[11px]"
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-lg text-[11px]"
               >
                 <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 font-medium truncate">
                   {replyTo ? (
                     <><CornerDownRight className="w-3 h-3" /> Replying to {replyAuthor}</>
                   ) : (
-                    <><Quote className="w-3 h-3" /> {formatQuote(selection?.text || "", 30)}</>
+                    <><Quote className="w-3 h-3" /> {formatQuote(selection?.text || "", 40)}</>
                   )}
                 </div>
                 <Button
@@ -143,44 +140,55 @@ export function CommentSection({
             )}
           </AnimatePresence>
           <Textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Feedback..."
-            className="min-h-[80px] bg-secondary/30 border-border/50 rounded-xl focus:ring-0 resize-none text-sm"
+            placeholder={selection ? "Add your annotation..." : "Join the discussion..."}
+            className="min-h-[100px] bg-secondary/30 border-border/50 rounded-xl focus:ring-0 resize-none text-sm leading-relaxed"
             required
           />
-          <div className="grid grid-cols-1 gap-2">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                placeholder="Name"
+                placeholder="Your Name (Optional)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-9 h-9 bg-secondary/30 border-border/50 rounded-lg text-xs"
+                className="pl-9 h-10 bg-secondary/30 border-border/50 rounded-lg text-xs"
               />
             </div>
-          </div>
-          <div className="flex items-center justify-end">
             <Button
               type="submit"
               disabled={isSubmitting || !content.trim()}
-              size="sm"
-              className="btn-gradient rounded-lg px-4 font-bold h-9"
+              className="btn-gradient rounded-lg px-6 font-bold h-10 shadow-indigo-500/20"
             >
               Post <Send className="ml-2 w-3.5 h-3.5" />
             </Button>
           </div>
         </form>
-      </div>
-      <div className="space-y-4">
+      </motion.div>
+      <div className="space-y-4 relative">
+        <AnimatePresence>
+          {activeCommentId && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute -inset-2 bg-indigo-500/5 rounded-3xl -z-10 pointer-events-none border border-indigo-500/10"
+            />
+          )}
+        </AnimatePresence>
         {isLoading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-muted/30 animate-pulse rounded-xl" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-2xl" />)}
           </div>
         ) : rootComments.length === 0 ? (
-          <div className="text-center py-12 bg-secondary/10 rounded-2xl border-2 border-dashed border-border/40">
-            <MessageSquare className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-muted-foreground text-xs">No comments yet.</p>
+          <div className="text-center py-20 bg-secondary/10 rounded-[2rem] border-2 border-dashed border-border/40">
+            <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <Sparkles className="w-8 h-8 text-indigo-200" />
+            </div>
+            <h3 className="text-sm font-bold text-foreground">No discussions yet</h3>
+            <p className="text-muted-foreground text-xs mt-1">Be the first to share your thoughts.</p>
           </div>
         ) : (
           rootComments.map(comment => (
