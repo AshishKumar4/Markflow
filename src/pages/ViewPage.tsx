@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Edit3, ArrowLeft, Loader2, Copy, Check, FileCode, ChevronRight, Home, Clock, MessageSquarePlus } from 'lucide-react';
+import { 
+  Edit3, 
+  ArrowLeft, 
+  Loader2, 
+  Copy, 
+  Check, 
+  FileCode, 
+  ChevronRight, 
+  Home, 
+  Clock, 
+  MessageSquarePlus, 
+  Download,
+  ArrowUp,
+  FileDown
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -9,36 +23,48 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { CommentSection } from '@/components/comments/comment-section';
 import { api } from '@/lib/api-client';
 import type { MarkdownDoc, Comment } from '@shared/types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 export function ViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [doc, setDoc] = useState<MarkdownDoc | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedRaw, setCopiedRaw] = useState(false);
   const [selection, setSelection] = useState<{ text: string; index: number } | null>(null);
   const [showAnnotate, setShowAnnotate] = useState(false);
   const [annotatePos, setAnnotatePos] = useState({ x: 0, y: 0 });
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
     setIsLoading(true);
+    setError(null);
     const loadData = async () => {
       try {
         const [docData, commentsData] = await Promise.all([
           api<MarkdownDoc>(`/api/documents/${id}`),
-          api<Comment[]>(`/api/comments/${id}`)
+          api<Comment[]>(`/api/comments/${id}`).catch(() => [] as Comment[])
         ]);
         if (isMounted) {
           setDoc(docData);
           setComments(commentsData);
         }
       } catch (err) {
-        if (isMounted) toast.error("Document not found");
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load document");
+          toast.error("Document not found or load failed");
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -58,15 +84,22 @@ export function ViewPage() {
         });
         setAnnotatePos({
           x: rect.left + rect.width / 2,
-          y: rect.top + window.scrollY - 40,
+          y: rect.top + window.scrollY - 48,
         });
         setShowAnnotate(true);
       } else {
         setShowAnnotate(false);
       }
     };
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 500);
+    };
     document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
   const handleMarkerClick = (commentId: string) => {
     setActiveCommentId(commentId);
@@ -82,6 +115,19 @@ export function ViewPage() {
     const date = new Date(doc.createdAt);
     return isValid(date) ? format(date, 'MMMM d, yyyy') : 'Recently';
   }, [doc?.createdAt]);
+  const handleDownload = () => {
+    if (!doc) return;
+    const blob = new Blob([doc.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.title.toLowerCase().replace(/\s+/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Markdown file downloaded");
+  };
   const handleCopyLink = () => {
     try {
       navigator.clipboard.writeText(window.location.href);
@@ -113,15 +159,17 @@ export function ViewPage() {
       </div>
     );
   }
-  if (!doc) {
+  if (error || !doc) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
             <Home className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h1 className="text-4xl font-display font-bold mb-4 tracking-tight">404: Not Found</h1>
-          <p className="text-muted-foreground mb-8 text-center max-w-sm mx-auto">This document might have been deleted or the link is broken.</p>
+          <h1 className="text-4xl font-display font-bold mb-4 tracking-tight">Document Not Found</h1>
+          <p className="text-muted-foreground mb-8 text-center max-w-sm mx-auto">
+            {error || "This document might have been deleted or the link is broken."}
+          </p>
           <Button asChild size="lg" className="rounded-full px-10 btn-gradient">
             <Link to="/">Back to Home</Link>
           </Button>
@@ -131,6 +179,10 @@ export function ViewPage() {
   }
   return (
     <div className="min-h-screen bg-background pb-32 selection:bg-indigo-500/10 transition-colors duration-500">
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 z-[100] origin-left"
+        style={{ scaleX }}
+      />
       <ThemeToggle />
       <AnimatePresence>
         {showAnnotate && (
@@ -150,7 +202,26 @@ export function ViewPage() {
               }}
             >
               <MessageSquarePlus className="w-4 h-4" />
-              Comment on selection
+              Annotate Selection
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-10 right-10 z-50"
+          >
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full w-12 h-12 bg-background/80 backdrop-blur-md shadow-xl border-border/40 hover:bg-accent"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <ArrowUp className="w-5 h-5" />
             </Button>
           </motion.div>
         )}
@@ -168,9 +239,15 @@ export function ViewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopyRaw} className="rounded-full hidden sm:flex border-border/60 bg-secondary/20 hover:bg-secondary/40 transition-all font-semibold">
-              {copiedRaw ? <Check className="w-3.5 h-3.5 mr-2 text-green-500" /> : <FileCode className="w-3.5 h-3.5 mr-2" />}
-              Raw
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleDownload}
+              className="rounded-full hidden md:flex border-border/60 bg-secondary/20 hover:bg-secondary/40 transition-all font-semibold"
+              title="Download Markdown"
+            >
+              <Download className="w-3.5 h-3.5 mr-2" />
+              Export
             </Button>
             <Button variant="outline" size="sm" onClick={handleCopyLink} className="rounded-full border-border/60 bg-secondary/20 hover:bg-secondary/40 transition-all font-semibold">
               {copied ? <Check className="w-3.5 h-3.5 mr-2 text-green-500" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
@@ -210,14 +287,24 @@ export function ViewPage() {
             </div>
           </div>
         </div>
-        <div ref={contentRef}>
-          <MarkdownPreview 
-            content={doc.content} 
-            proseSize="xl" 
-            className="font-sans antialiased" 
+        <div ref={contentRef} className="relative">
+          <MarkdownPreview
+            content={doc.content}
+            proseSize="xl"
+            className="font-sans antialiased"
             comments={comments}
             onCommentClick={handleMarkerClick}
           />
+        </div>
+        <div className="mt-20 flex justify-center">
+           <Button 
+            variant="ghost" 
+            onClick={handleCopyRaw} 
+            className="text-muted-foreground hover:text-indigo-600 text-xs font-bold uppercase tracking-widest gap-2 py-6"
+           >
+             {copiedRaw ? <Check className="w-4 h-4 text-green-500" /> : <FileCode className="w-4 h-4" />}
+             Copy Raw Markdown
+           </Button>
         </div>
         <CommentSection
           docId={doc.id}
