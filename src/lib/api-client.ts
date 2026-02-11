@@ -4,36 +4,37 @@ import { ApiResponse } from "../../shared/types"
  * It automatically prepends /api/v1 if the path doesn't start with it.
  */
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  // Ensure we use the robust v1 namespace
-  const targetPath = path.startsWith('/api/v1/') ? path : path.replace('/api/', '/api/v1/');
+  // Ensure we use the robust v1 namespace and absolute URL for robustness
+  const normalizedPath = path.startsWith('/api/v1/') ? path : path.replace('/api/', '/api/v1/');
+  const targetUrl = new URL(normalizedPath, window.location.origin).toString();
   try {
-    const res = await fetch(targetPath, {
-      headers: { 
+    const res = await fetch(targetUrl, {
+      ...init,
+      headers: {
         'Content-Type': 'application/json',
-        'X-MarkFlow-Version': '1.0.0'
+        ...(init?.headers || {}),
       },
-      ...init
     });
     if (!res.ok) {
       // Handle expected scenarios gracefully
       if (res.status === 404) {
-        throw new Error(`Resource not found: ${targetPath}`);
+        throw new Error(`Resource not found: ${normalizedPath}`);
       }
       const errorText = await res.text().catch(() => 'No error detail available');
-      console.error(`[API ERROR] Status: ${res.status}, Detail: ${errorText}, Path: ${targetPath}`);
+      console.error(`[API ERROR] Status: ${res.status}, Detail: ${errorText}, Path: ${normalizedPath}`);
       throw new Error(`Server returned status ${res.status}`);
     }
     const json = (await res.json()) as ApiResponse<T>;
     if (!json.success || json.data === undefined) {
       const errorMessage = json.error || 'Request failed';
-      console.warn(`[API WARNING] Unsuccessful response: ${errorMessage} at ${targetPath}`);
+      console.warn(`[API WARNING] Unsuccessful response: ${errorMessage} at ${normalizedPath}`);
       throw new Error(errorMessage);
     }
     return json.data;
   } catch (err) {
     // Only log critical fetch failures (network issues, etc.)
     if (err instanceof Error && !err.message.includes('not found')) {
-      console.error(`[API FETCH FAILED] Path: ${targetPath}`, err);
+      console.error(`[API FETCH FAILED] Path: ${normalizedPath}`, err);
     }
     throw err;
   }
