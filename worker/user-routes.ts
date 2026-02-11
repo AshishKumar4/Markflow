@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
-import { DocEntity } from "./entities";
+import { DocEntity, CommentEntity } from "./entities";
 import { ok, bad, notFound, isStr } from './core-utils';
-import type { MarkdownDoc } from "@shared/types";
+import type { MarkdownDoc, Comment } from "@shared/types";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // DOCUMENTS
   app.get('/api/documents/:id', async (c) => {
@@ -43,5 +43,35 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const lq = c.req.query('limit');
     const page = await DocEntity.list(c.env, cq ?? null, lq ? Math.max(1, (Number(lq) | 0)) : 20);
     return ok(c, page);
+  });
+  // COMMENTS
+  app.get('/api/comments/:docId', async (c) => {
+    const docId = c.req.param('docId');
+    const comments = await CommentEntity.listForDoc(c.env, docId);
+    return ok(c, comments);
+  });
+  app.post('/api/comments/:docId', async (c) => {
+    const docId = c.req.param('docId');
+    const body = await c.req.json() as Partial<Comment>;
+    if (!body.content?.trim()) return bad(c, 'Content required');
+    const now = Date.now();
+    const comment: Comment = {
+      id: crypto.randomUUID(),
+      docId,
+      parentId: body.parentId,
+      authorName: body.authorName?.trim(),
+      authorEmail: body.authorEmail?.trim(),
+      content: body.content.trim(),
+      position: body.position,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await CommentEntity.create(c.env, comment);
+    return ok(c, comment);
+  });
+  app.delete('/api/comments/:docId/:commentId', async (c) => {
+    const commentId = c.req.param('commentId');
+    const deleted = await CommentEntity.delete(c.env, commentId);
+    return ok(c, { deleted });
   });
 }

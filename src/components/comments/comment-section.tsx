@@ -1,30 +1,21 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, User, X, CornerDownRight, Quote, Sparkles } from 'lucide-react';
+import { MessageSquare, Send, Sparkles, User, Mail, X, CornerDownRight, Quote } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CommentItem } from './comment-item';
 import { api } from '@/lib/api-client';
-import { markCommentOwned, cn, formatQuote } from '@/lib/utils';
+import { markCommentOwned } from '@/lib/utils';
 import type { Comment } from '@shared/types';
+import { cn } from '@/lib/utils';
 interface CommentSectionProps {
   docId: string;
   selection?: { text: string; index: number } | null;
   onClearSelection?: () => void;
-  activeCommentId?: string | null;
-  onClearActive?: () => void;
-  sidebarMode?: boolean;
 }
-export function CommentSection({
-  docId,
-  selection,
-  onClearSelection,
-  activeCommentId,
-  onClearActive,
-  sidebarMode = false
-}: CommentSectionProps) {
+export function CommentSection({ docId, selection, onClearSelection }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,30 +24,24 @@ export function CommentSection({
   const [email, setEmail] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fetchComments = useCallback(async () => {
+  const fetchComments = async () => {
     try {
       const data = await api<Comment[]>(`/api/comments/${docId}`);
       setComments(data);
     } catch (err) {
+      console.error(err);
       toast.error("Failed to load comments");
     } finally {
       setIsLoading(false);
     }
-  }, [docId]);
+  };
   useEffect(() => {
     fetchComments();
-  }, [fetchComments]);
+  }, [docId]);
   useEffect(() => {
     if (selection) {
       setReplyTo(null);
-      // Wait for sidebar animation and layout shift
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        requestAnimationFrame(() => {
-          textareaRef.current?.focus();
-        });
-      }, 300);
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [selection]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,47 +80,50 @@ export function CommentSection({
       toast.error("Failed to delete comment");
     }
   };
-  const rootComments = useMemo(() =>
-    comments.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt),
+  const rootComments = useMemo(() => 
+    comments.filter(c => !c.parentId).sort((a, b) => b.createdAt - a.createdAt), 
   [comments]);
-  const getReplies = (parentId: string) =>
+  const getReplies = (parentId: string) => 
     comments.filter(c => c.parentId === parentId).sort((a, b) => a.createdAt - b.createdAt);
   const replyAuthor = useMemo(() => {
     if (!replyTo) return null;
     return comments.find(c => c.id === replyTo)?.authorName || 'Anonymous';
   }, [replyTo, comments]);
   return (
-    <div className={cn("space-y-6", sidebarMode ? "p-0" : "mt-20")}>
-      <motion.div
-        layout
-        ref={formRef}
-        className={cn(
-          "bg-card/40 rounded-2xl border transition-all duration-500 overflow-hidden scroll-mt-20",
-          selection ? "border-indigo-500/50 ring-4 ring-indigo-500/5 shadow-xl" : "border-border/50",
-          sidebarMode ? "p-4" : "p-6 sm:p-8"
-        )}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <section className="mt-20 space-y-10" id="comments">
+      <div className="flex items-center justify-between border-b border-border pb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <MessageSquare className="w-5 h-5" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold">Discussions</h2>
+          <span className="bg-secondary px-2.5 py-0.5 rounded-full text-xs font-bold text-muted-foreground border border-border/50">
+            {comments.length}
+          </span>
+        </div>
+      </div>
+      <div ref={formRef} className="bg-card/30 rounded-3xl p-6 sm:p-8 border border-border/50 shadow-sm space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <AnimatePresence mode="popLayout">
             {(replyTo || selection) && (
               <motion.div
-                initial={{ opacity: 0, height: 0, y: -10 }}
-                animate={{ opacity: 1, height: 'auto', y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -10 }}
-                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-3 py-2 rounded-lg text-[11px]"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl text-sm"
               >
-                <div className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 font-medium truncate">
+                <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 font-medium">
                   {replyTo ? (
-                    <><CornerDownRight className="w-3 h-3" /> Replying to {replyAuthor}</>
+                    <><CornerDownRight className="w-4 h-4" /> Replying to {replyAuthor}</>
                   ) : (
-                    <><Quote className="w-3 h-3" /> {formatQuote(selection?.text || "", 40)}</>
+                    <><Quote className="w-4 h-4" /> Commenting on: "{selection?.text.slice(0, 30)}..."</>
                   )}
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 rounded-full"
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 rounded-full hover:bg-indigo-500/20"
                   onClick={() => { setReplyTo(null); onClearSelection?.(); }}
                 >
                   <X className="w-3 h-3" />
@@ -144,69 +132,75 @@ export function CommentSection({
             )}
           </AnimatePresence>
           <Textarea
-            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={selection ? "Add your annotation..." : "Join the discussion..."}
-            className="min-h-[100px] bg-secondary/30 border-border/50 rounded-xl focus:ring-0 resize-none text-sm leading-relaxed"
+            placeholder="Share your thoughts or feedback..."
+            className="min-h-[120px] bg-secondary/30 border-border/50 rounded-2xl focus:ring-indigo-500/20 focus:border-indigo-500/50 resize-none text-base"
             required
           />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="relative group">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
               <Input
-                placeholder="Your Name (Optional)"
+                placeholder="Name (Optional)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="pl-9 h-10 bg-secondary/30 border-border/50 rounded-lg text-xs"
+                className="pl-10 bg-secondary/30 border-border/50 rounded-xl"
               />
             </div>
-            <Button
-              type="submit"
+            <div className="relative group">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+              <Input
+                placeholder="Email for Gravatar (Optional)"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10 bg-secondary/30 border-border/50 rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+              <Sparkles className="w-3 h-3 text-indigo-500" />
+              <span>Public Posting</span>
+            </div>
+            <Button 
+              type="submit" 
               disabled={isSubmitting || !content.trim()}
-              className="btn-gradient rounded-lg px-6 font-bold h-10 shadow-indigo-500/20"
+              className="btn-gradient rounded-xl px-8 shadow-lg shadow-indigo-500/20 font-bold h-11"
             >
-              Post <Send className="ml-2 w-3.5 h-3.5" />
+              {isSubmitting ? "Posting..." : "Post Comment"}
+              <Send className="ml-2 w-4 h-4" />
             </Button>
           </div>
         </form>
-      </motion.div>
-      <div className="space-y-4 relative">
-        <AnimatePresence>
-          {activeCommentId && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute -inset-2 bg-indigo-500/5 rounded-3xl -z-10 pointer-events-none border border-indigo-500/10"
-            />
-          )}
-        </AnimatePresence>
+      </div>
+      <div className="space-y-8">
         {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted/30 animate-pulse rounded-2xl" />)}
+          <div className="space-y-6">
+            {[1, 2].map(i => <div key={i} className="h-32 bg-muted/30 animate-pulse rounded-2xl" />)}
           </div>
         ) : rootComments.length === 0 ? (
-          <div className="text-center py-20 bg-secondary/10 rounded-[2rem] border-2 border-dashed border-border/40">
-            <div className="w-16 h-16 bg-background rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <Sparkles className="w-8 h-8 text-indigo-200" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">No discussions yet</h3>
-            <p className="text-muted-foreground text-xs mt-1">Be the first to share your thoughts.</p>
+          <div className="text-center py-20 bg-secondary/20 rounded-[2rem] border-2 border-dashed border-border/40">
+            <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-muted-foreground font-medium">No discussions yet. Be the first to speak up!</p>
           </div>
         ) : (
           rootComments.map(comment => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
+            <CommentItem 
+              key={comment.id} 
+              comment={comment} 
               replies={getReplies(comment.id)}
-              isHighlighted={activeCommentId === comment.id}
-              onReply={setReplyTo}
+              onReply={(id) => {
+                setReplyTo(id);
+                onClearSelection?.();
+                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
               onDelete={handleDelete}
             />
           ))
         )}
       </div>
-    </div>
+    </section>
   );
 }

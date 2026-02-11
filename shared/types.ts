@@ -10,6 +10,20 @@ export interface MarkdownDoc {
   createdAt: number;
   updatedAt: number;
 }
+export interface Comment {
+  id: string;
+  docId: string;
+  parentId?: string;
+  authorName?: string;
+  authorEmail?: string;
+  content: string;
+  position?: {
+    text?: string;
+    index?: number;
+  };
+  createdAt: number;
+  updatedAt: number;
+}
 // Minimal real-world chat example types (shared by frontend and worker)
 export interface User {
   id: string;

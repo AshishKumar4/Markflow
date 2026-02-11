@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { User, Chat, ChatMessage, MarkdownDoc } from "@shared/types";
+import type { User, Chat, ChatMessage, MarkdownDoc, Comment } from "@shared/types";
 import { MOCK_CHAT_MESSAGES, MOCK_CHATS, MOCK_USERS } from "@shared/mock-data";
 /**
  * MarkFlow Document Entity
@@ -14,6 +14,29 @@ export class DocEntity extends IndexedEntity<MarkdownDoc> {
     createdAt: 0,
     updatedAt: 0,
   };
+}
+/**
+ * MarkFlow Comment Entity
+ */
+export class CommentEntity extends IndexedEntity<Comment> {
+  static readonly entityName = "comment";
+  static readonly indexName = "comments";
+  static readonly initialState: Comment = {
+    id: "",
+    docId: "",
+    content: "",
+    createdAt: 0,
+    updatedAt: 0,
+  };
+  /**
+   * List all comments for a document. 
+   * Note: In a production app, we'd use a secondary index for docId.
+   * Here we filter the global list for simplicity in this template.
+   */
+  static async listForDoc(env: any, docId: string): Promise<Comment[]> {
+    const { items } = await this.list(env, null, 1000);
+    return items.filter(c => c.docId === docId).sort((a, b) => a.createdAt - b.createdAt);
+  }
 }
 // USER ENTITY: one DO instance per user
 export class UserEntity extends IndexedEntity<User> {
