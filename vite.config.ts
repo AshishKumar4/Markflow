@@ -1,4 +1,7 @@
-// Making changes to this file is **STRICTLY** forbidden. All the code in here is 100% correct and audited.
+/**
+ * Vite configuration — handles both the React frontend build and the
+ * Cloudflare Worker build via @cloudflare/vite-plugin.
+ */
 import { defineConfig, loadEnv } from "vite";
 import path from "path";
 import react from "@vitejs/plugin-react";
@@ -108,7 +111,7 @@ export default ({ mode }: { mode: string }) => {
     plugins: [react(), cloudflare(), watchDependenciesPlugin(), reloadTriggerPlugin()],
     build: {
       minify: true,
-      sourcemap: "inline", // Use inline source maps for better error reporting
+      sourcemap: true, // Use separate .map files (inline data URLs are unsupported by Wrangler)
       rollupOptions: {
         output: {
           sourcemapExcludeSources: false, // Include original source in source maps

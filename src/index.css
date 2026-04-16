@@ -60,27 +60,199 @@
     -webkit-text-fill-color: transparent;
   }
 }
+/* Mermaid diagram containers */
+.mermaid-container {
+  @apply my-6 rounded-2xl border p-5 transition-colors duration-200;
+  border-color: hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--muted) / 0.3) 0%, hsl(var(--muted) / 0.1) 100%);
+}
+.mermaid-container.mermaid-success {
+  @apply bg-gradient-to-br from-indigo-50/40 via-white to-slate-50/50 border-indigo-200/40 shadow-sm;
+}
+.dark .mermaid-container.mermaid-success {
+  @apply from-indigo-950/20 via-slate-900/60 to-slate-950/40 border-indigo-500/10 shadow-lg;
+  box-shadow: 0 4px 24px -4px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.05);
+}
+.mermaid-container.mermaid-loading {
+  @apply bg-muted/30;
+}
+.mermaid-container.mermaid-error {
+  @apply bg-transparent border-red-200/60;
+}
+.dark .mermaid-container.mermaid-error {
+  @apply border-red-900/30;
+}
+/* Diagram SVG: allow natural size with horizontal scroll when needed */
+.mermaid-svg-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.mermaid-svg-wrapper svg {
+  height: auto;
+  border-radius: 0.5rem;
+  min-width: 200px;
+}
+/* Subtle scroll fade when diagram overflows */
+.mermaid-svg-wrapper {
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+}
+.mermaid-svg-wrapper:not([style*="overflow"]):hover,
+.mermaid-svg-wrapper:focus-within {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+/* Remove fade when content doesn't overflow (JS-applied via scrollWidth check would be ideal, but CSS-only heuristic) */
+.mermaid-svg-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+.mermaid-svg-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mermaid-svg-wrapper::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+/* Lightbox SVG: render at full natural size */
+.lightbox-svg svg {
+  max-width: none !important;
+  height: auto;
+}
+/* Reset prose typography inside mermaid diagram containers */
+.prose .mermaid-container p,
+.prose .mermaid-container pre,
+.prose .mermaid-container code {
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* ─── Print / PDF stylesheet ─────────────────────────────────────── */
 @media print {
-  .print\:hidden, header, footer, button, .ThemeToggle, #comments, .fixed {
+  /* 1. Hide UI chrome selectively (not all .fixed) */
+  .print\:hidden,
+  header, footer, button,
+  .ThemeToggle,
+  [data-panel-group],
+  [data-resize-handle],
+  .drawer-trigger,
+  [role="dialog"] {
     display: none !important;
   }
-  body {
+
+  /* 2. Show only the main content panel */
+  [data-panel-id="main-content"] {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* 3. Un-trap all scrollable containers so full content prints */
+  .h-screen,
+  .h-full,
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* 4. Force light mode */
+  body, html {
     background: white !important;
     color: black !important;
     padding: 0 !important;
     margin: 0 !important;
   }
+  * {
+    color-scheme: light !important;
+  }
+  .dark .prose-invert,
+  .prose-invert {
+    --tw-prose-body: #1e293b !important;
+    --tw-prose-headings: #0f172a !important;
+    --tw-prose-links: #4f46e5 !important;
+    --tw-prose-code: #1e293b !important;
+  }
+  .prose pre,
+  pre {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+  .prose pre code,
+  pre code {
+    color: #334155 !important;
+  }
+  .prose blockquote {
+    border-left-color: #6366f1 !important;
+    background: #f8fafc !important;
+  }
+
+  /* 5. Content width */
   .prose {
     max-width: none !important;
-    font-size: 12pt !important;
+    font-size: 11pt !important;
+    line-height: 1.7 !important;
   }
-  .max-w-4xl {
+  .max-w-3xl, .max-w-4xl {
     max-width: 100% !important;
-    padding: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
-  a::after {
+
+  /* 6. Images: strip shadows, reduce radius, avoid page splits */
+  .prose img,
+  img {
+    box-shadow: none !important;
+    border-radius: 0.5rem !important;
+    page-break-inside: avoid;
+    max-width: 100% !important;
+  }
+  /* Hide the expand icon overlay from images */
+  .group\/img > span:last-child {
+    display: none !important;
+  }
+
+  /* 7. Diagrams: force white bg, avoid page splits */
+  .mermaid-container {
+    border: 1px solid #e2e8f0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  .mermaid-svg-wrapper {
+    overflow: visible !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+  .mermaid-svg-wrapper svg {
+    max-width: 100% !important;
+  }
+
+  /* 8. Page break rules */
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  pre, .mermaid-container, img, figure, table {
+    page-break-inside: avoid;
+  }
+
+  /* 9. Links: show URL only for external links, not images or internal */
+  a[href^="http"]:not([href*="localhost"]):not([href^="/"])::after {
     content: " (" attr(href) ")";
-    font-size: 0.8em;
-    color: #666;
+    font-size: 0.75em;
+    color: #6b7280;
+    word-break: break-all;
+  }
+  a[href^="/"]::after,
+  a[href^="#"]::after {
+    content: none !important;
   }
 }

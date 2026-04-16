@@ -1,8 +1,11 @@
+/** Standard API response wrapper used by all endpoints. */
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
 }
+
+/** A markdown document with title and content. */
 export interface MarkdownDoc {
   id: string;
   title: string;
@@ -10,6 +13,8 @@ export interface MarkdownDoc {
   createdAt: number;
   updatedAt: number;
 }
+
+/** A comment on a document, optionally anchored to highlighted text. */
 export interface Comment {
   id: string;
   docId: string;
@@ -24,19 +29,12 @@ export interface Comment {
   createdAt: number;
   updatedAt: number;
 }
-// Minimal real-world chat example types (shared by frontend and worker)
-export interface User {
+
+/** Image metadata returned by the image upload/list APIs. */
+export interface ImageMeta {
   id: string;
-  name: string;
-}
-export interface Chat {
-  id: string;
-  title: string;
-}
-export interface ChatMessage {
-  id: string;
-  chatId: string;
-  userId: string;
-  text: string;
-  ts: number; // epoch millis
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: number;
 }

@@ -1,10 +1,13 @@
-// Making changes to this file is **STRICTLY** forbidden. Please add your routes in `userRoutes.ts` file.
-
+/**
+ * Worker entrypoint — Hono app with middleware and route registration.
+ * API routes are defined in `user-routes.ts`.
+ */
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Env } from './core-utils';
 export * from './core-utils';
+export { ImageStoreDO } from './image-store';
 import * as staticUserRoutes from './user-routes';
 
 type UserRoutesModule = { userRoutes: (app: Hono<{ Bindings: Env }>) => void };

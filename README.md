@@ -1,165 +1,132 @@
-# Markflow - Cloudflare Workers Chat Demo
+# MarkFlow
 
-[cloudflarebutton]
+A minimalist markdown publishing platform built on Cloudflare Workers and Durable Objects.
 
-A production-ready full-stack chat application built with Cloudflare Workers, Durable Objects, and React. Demonstrates scalable entity storage, indexed listing, and real-time messaging using a single Global Durable Object for multiple entities.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/AshishKumar4/Markflow/actions/workflows/ci.yml/badge.svg)](https://github.com/AshishKumar4/Markflow/actions/workflows/ci.yml)
+
+---
+
+## About
+
+MarkFlow is a full-stack markdown publishing platform where you can write, preview, and publish documents -- all from the browser. It runs entirely on Cloudflare's edge network with zero traditional servers: the backend is a Cloudflare Worker with Durable Objects for persistent storage, and the frontend is a React SPA served from Cloudflare's asset network.
 
 ## Features
 
-- **Multi-Entity Durable Objects**: Users and ChatBoards stored as individual DO instances sharing a single Global DO for storage efficiency.
-- **Indexed Listing**: Efficient pagination and listing of users and chats with cursor-based queries.
-- **Chat Functionality**: Create chats, send messages, list messages per chat.
-- **API-Driven**: RESTful endpoints for CRUD operations (`/api/users`, `/api/chats`, `/api/chats/:id/messages`).
-- **React Frontend**: Modern UI with shadcn/ui components, Tailwind CSS, TanStack Query, and theme support.
-- **Seed Data**: Mock users, chats, and messages auto-populate on first run.
-- **Type-Safe**: Full TypeScript support across worker and frontend with shared types.
-- **Production-Ready**: Error handling, CORS, logging, client error reporting.
+- **Live markdown editor** with split-pane preview, draft auto-save, and keyboard shortcuts (`Ctrl+S` to save)
+- **Mermaid diagram support** -- write `mermaid` code blocks and see flowcharts, sequence diagrams, ER diagrams, and more rendered inline
+- **Clickable image & diagram lightbox** -- click any image or diagram to open a full-screen viewer with zoom (scroll wheel), pan (drag), and fit-to-screen
+- **Image upload** -- upload images via toolbar button, drag-and-drop onto the editor, or paste from clipboard (`Cmd+V`); served directly from Durable Object SQLite storage with chunked binary encoding
+- **Media library** -- browse, search, and manage all uploaded images in a gallery dialog
+- **Threaded comments** -- highlight text to annotate; comments appear in a resizable sidebar with reply threading
+- **Focus mode** -- distraction-free reading with a single click
+- **Print / PDF export** -- browser-native `window.print()` with a comprehensive print stylesheet that handles scroll containers, dark mode neutralization, page breaks, and diagram rendering
+- **Dark mode** -- system-aware theme toggle that persists across sessions
+- **Document directory** -- paginated list of all published documents with search
 
 ## Tech Stack
 
-- **Backend**: Cloudflare Workers, Hono, Durable Objects
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, React Router
-- **State & Data**: Immer, Zustand (ready for use), shared types
-- **UI Components**: Radix UI, Lucide React, Sonner (toasts)
-- **Build Tools**: Bun, Wrangler, Vite
-- **Dev Tools**: ESLint, TypeScript ESLint
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion |
+| Backend | Cloudflare Workers, Hono, Durable Objects (SQLite) |
+| Markdown | react-markdown, remark-gfm, Mermaid |
+| Storage | Durable Objects KV (documents, comments) + SQLite (images with 1.8 MB chunking) |
+| Deployment | Wrangler CLI, Cloudflare Assets (SPA routing) |
+
+## Architecture
+
+```
+Browser (React SPA)
+    |
+    v
+Cloudflare Worker (Hono router)
+    |
+    +-- /api/v1/documents/*  -->  GlobalDurableObject (KV-style entity storage)
+    +-- /api/v1/comments/*   -->  GlobalDurableObject
+    +-- /api/v1/images/*     -->  ImageStoreDO (SQLite chunked binary storage)
+    |
+    +-- /* (static assets)   -->  Cloudflare Assets (SPA fallback)
+```
 
 ## Quick Start
 
 ### Prerequisites
 
-- Bun 1.0+ installed (`curl -fsSL https://bun.sh/install | bash`)
-- Cloudflare account and Wrangler CLI (`bunx wrangler@latest login`)
+- [Bun](https://bun.sh/) 1.0+ (`curl -fsSL https://bun.sh/install | bash`)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (`bunx wrangler@latest login`)
 
-### Installation
+### Install & Run
 
 ```bash
-git clone <repo-url>
-cd markflow-fbhj1yyxqquocpjwznjmz
+git clone https://github.com/AshishKumar4/Markflow.git
+cd Markflow
 bun install
-```
-
-### Local Development
-
-```bash
-# Run dev server (frontend + worker APIs)
 bun run dev
-
-# Open http://localhost:3000 (or $PORT)
 ```
 
-The app auto-seeds mock data. Test APIs via browser devtools or tools like Thunder Client.
-
-### Example API Usage
-
-```bash
-# List users (paginated)
-curl "http://localhost:3000/api/users?limit=10"
-
-# Create user
-curl -X POST "http://localhost:3000/api/users" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe"}'
-
-# List chats
-curl "http://localhost:3000/api/chats"
-
-# Send message to chat
-curl -X POST "http://localhost:3000/api/chats/c1/messages" \
-  -H "Content-Type: application/json" \
-  -d '{"userId": "u1", "text": "Hello!"}'
-```
-
-## Development
-
-### Project Structure
-
-```
-├── src/              # React frontend
-├── worker/           # Cloudflare Worker (APIs + DO logic)
-├── shared/           # Shared types & mock data
-├── tailwind.config.js # UI theming
-└── wrangler.jsonc    # Worker config
-```
-
-### Adding New Entities
-
-1. Extend `IndexedEntity` in `worker/entities.ts`:
-   ```typescript
-   export class NewEntity extends IndexedEntity<NewEntityState> {
-     static readonly entityName = "newentity";
-     static readonly indexName = "newentities";
-     // methods...
-   }
-   ```
-
-2. Add routes in `worker/user-routes.ts` using entity statics (`list`, `create`, `delete`).
-
-3. Update `shared/types.ts` and use in frontend.
-
-### Frontend Customization
-
-- Pages in `src/pages/`
-- Components: `src/components/` (shadcn/ui pre-installed)
-- Hooks: `src/hooks/`
-- API calls: Use `src/lib/api-client.ts`
-
-### Type Generation
-
-```bash
-bunx wrangler types  # Update worker Env types
-```
+Open [http://localhost:3000](http://localhost:3000).
 
 ## Deployment
 
 Deploy to Cloudflare Workers in one command:
 
 ```bash
-bun run deploy  # Builds frontend + deploys worker
+bun run deploy
 ```
 
-Or manually:
+This builds the frontend with Vite and deploys the Worker + assets via Wrangler. Configuration lives in `wrangler.jsonc`.
 
-```bash
-bun run build   # Build frontend assets
-bunx wrangler deploy
+## Project Structure
+
 ```
-
-Configuration in `wrangler.jsonc` handles Durable Objects and SPA routing.
-
-[cloudflarebutton]
-
-### Environment Variables
-
-Set via Wrangler dashboard or CLI:
-- No required vars for demo (all storage via DOs).
+markflow/
+├── src/                    # React frontend
+│   ├── components/         # UI components (shadcn/ui, markdown preview, media library, etc.)
+│   ├── pages/              # Route pages (Home, Editor, View, Docs)
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utilities and API client
+│   └── index.css           # Global styles + print stylesheet
+├── worker/                 # Cloudflare Worker backend
+│   ├── index.ts            # Hono app entrypoint, middleware, exports
+│   ├── user-routes.ts      # API route handlers (documents, comments, images)
+│   ├── entities.ts         # Entity definitions (DocEntity, CommentEntity)
+│   ├── image-store.ts      # ImageStoreDO - Durable Object for binary image storage
+│   └── core-utils.ts       # Durable Object abstraction layer (entity framework)
+├── shared/                 # Shared TypeScript types
+│   └── types.ts            # API response, document, comment, image types
+├── wrangler.jsonc          # Cloudflare Worker configuration
+├── vite.config.ts          # Vite build configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+└── package.json
+```
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `bun run dev` | Start dev server |
-| `bun run build` | Build for production |
-| `bun run preview` | Preview production build |
-| `bun run lint` | Lint codebase |
-| `bun run deploy` | Deploy to Cloudflare |
-| `bunx wrangler types` | Generate types |
+| `bun run dev` | Start local development server |
+| `bun run build` | Production build (frontend + worker) |
+| `bun run preview` | Preview production build locally |
+| `bun run lint` | Lint with ESLint |
+| `bun run typecheck` | Type-check with TypeScript |
+| `bun run deploy` | Build and deploy to Cloudflare Workers |
+| `bun run cf-typegen` | Generate Cloudflare binding types |
 
-## Architecture Notes
+## Configuration
 
-- **Global Durable Object**: Single DO instance acts as KV-like storage for all entities.
-- **Entity Isolation**: Each entity (User, ChatBoard) gets its own DO stub by name.
-- **CAS Operations**: Atomic updates prevent race conditions.
-- **Indexes**: Prefix-based listing for pagination.
+All infrastructure configuration lives in `wrangler.jsonc`:
+
+- **Durable Object bindings**: `GlobalDurableObject` (documents + comments) and `ImageStoreDO` (image storage)
+- **Asset routing**: SPA fallback for client-side routing; `/api/*` requests hit the Worker
+- **Migrations**: SQLite-backed DO classes with versioned migrations
+
+No environment variables are required for local development. For production secrets, use `wrangler secret put KEY_NAME`.
 
 ## Contributing
 
-1. Fork and clone.
-2. `bun install`
-3. Make changes, `bun run lint`.
-4. Test locally, `bun run deploy`.
-5. PR with clear description.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
 
 ## License
 
-MIT - See [LICENSE](LICENSE) for details.
+[MIT](LICENSE) -- Ashish Kumar Singh

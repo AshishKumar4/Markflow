@@ -1,10 +1,10 @@
 /**
- * Wrangler config for the Cloudflare Durable Object template
- * STRICTLY DO NOT MODIFY THIS FILE - Hidden from AI to prevent breaking core functionality
+ * Wrangler configuration for MarkFlow.
+ * Defines Durable Object bindings, asset routing, and SQLite migrations.
  */
  {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "markflow-fbhj1yyxqquocpjwznjmz",
+	"name": "markflow",
 	"main": "worker/index.ts",
 	"compatibility_date": "2025-04-24",
 	"assets": {
@@ -19,6 +19,10 @@
         {
           "name": "GlobalDurableObject",
           "class_name": "GlobalDurableObject"
+        },
+        {
+          "name": "ImageStoreDO",
+          "class_name": "ImageStoreDO"
         }
       ]
     },
@@ -27,6 +31,12 @@
         "tag": "v1",
         "new_sqlite_classes": [
           "GlobalDurableObject"
+        ]
+      },
+      {
+        "tag": "v2",
+        "new_sqlite_classes": [
+          "ImageStoreDO"
         ]
       }
     ]

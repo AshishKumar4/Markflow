@@ -1,9 +1,13 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import type { Comment } from '@shared/types';
 import { motion } from 'framer-motion';
+import { Maximize2 } from 'lucide-react';
+import { MermaidDiagram } from './mermaid-diagram';
+import { ImageLightbox } from './image-lightbox';
+
 interface MarkdownPreviewProps {
   content: string;
   className?: string;
@@ -12,6 +16,7 @@ interface MarkdownPreviewProps {
   onCommentClick?: (commentId: string) => void;
   activeCommentId?: string | null;
 }
+
 function getTextContent(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (typeof children === 'number') return String(children);
@@ -21,6 +26,7 @@ function getTextContent(children: React.ReactNode): string {
   }
   return '';
 }
+
 export function MarkdownPreview({
   content,
   className,
@@ -29,6 +35,26 @@ export function MarkdownPreview({
   onCommentClick,
   activeCommentId
 }: MarkdownPreviewProps) {
+  // Lightbox state
+  const [lightbox, setLightbox] = useState<{
+    open: boolean;
+    src?: string;
+    svgContent?: string;
+    alt?: string;
+  }>({ open: false });
+
+  const openImageLightbox = useCallback((src: string, alt?: string) => {
+    setLightbox({ open: true, src, alt });
+  }, []);
+
+  const openSvgLightbox = useCallback((svgContent: string) => {
+    setLightbox({ open: true, svgContent, alt: 'Diagram' });
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setLightbox({ open: false });
+  }, []);
+
   const getCommentsForText = useCallback((text: string) => {
     if (!text || text.length < 3) return [];
     return comments.filter(c => {
@@ -38,6 +64,7 @@ export function MarkdownPreview({
       return cleanBlock.includes(cleanTarget);
     });
   }, [comments]);
+
   const components = useMemo(() => {
     const BlockWrapper = ({ children }: { children: React.ReactNode }) => {
       const text = getTextContent(children);
@@ -80,10 +107,10 @@ export function MarkdownPreview({
       h2: ({ children }: any) => <BlockWrapper><h2>{children}</h2></BlockWrapper>,
       h3: ({ children }: any) => <BlockWrapper><h3>{children}</h3></BlockWrapper>,
       h4: ({ children }: any) => <BlockWrapper><h4>{children}</h4></BlockWrapper>,
-      li: ({ children, className, ...props }: any) => {
-        const isTask = className?.includes('task-list-item');
+      li: ({ children, className: liClassName, ...props }: any) => {
+        const isTask = liClassName?.includes('task-list-item');
         return (
-          <li className={cn(className, isTask ? "list-none flex items-start gap-2 -ml-8" : "")} {...props}>
+          <li className={cn(liClassName, isTask ? "list-none flex items-start gap-2 -ml-8" : "")} {...props}>
             {children}
           </li>
         );
@@ -102,26 +129,64 @@ export function MarkdownPreview({
           );
         }
         return <input {...props} />;
+      },
+      // Custom img: clickable with expand affordance
+      img: ({ src, alt, ...props }: any) => (
+        <span
+          className="group/img relative block cursor-pointer"
+          role="button"
+          tabIndex={0}
+          aria-label={`View ${alt || 'image'} fullscreen`}
+          onClick={() => src && openImageLightbox(src, alt)}
+          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && src) { e.preventDefault(); openImageLightbox(src, alt); } }}
+        >
+          <img src={src} alt={alt || ''} loading="lazy" {...props} />
+          <span className="absolute top-3 right-3 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm text-white rounded-lg p-1.5 pointer-events-none">
+            <Maximize2 className="w-4 h-4" />
+          </span>
+        </span>
+      ),
+      pre: ({ node, children, ...props }: any) => {
+        // Detect mermaid code blocks by inspecting the hast AST node
+        const codeChild = node?.children?.[0];
+        if (codeChild?.tagName === 'code') {
+          const langClass = codeChild.properties?.className?.[0] || '';
+          if (langClass === 'language-mermaid') {
+            const text = codeChild.children?.[0]?.value || '';
+            return <MermaidDiagram chart={text} onExpand={openSvgLightbox} />;
+          }
+        }
+        return <pre {...props}>{children}</pre>;
       }
     };
-  }, [getCommentsForText, activeCommentId, onCommentClick]);
+  }, [getCommentsForText, activeCommentId, onCommentClick, openImageLightbox, openSvgLightbox]);
+
   return (
-    <div className={cn(
-      "prose prose-slate dark:prose-invert max-w-none",
-      "prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight",
-      "prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline font-medium",
-      "prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:px-6 prose-blockquote:py-1 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic",
-      "prose-pre:bg-slate-900 prose-pre:rounded-2xl prose-pre:shadow-xl prose-pre:border prose-pre:border-white/5",
-      "prose-img:rounded-3xl prose-img:shadow-2xl",
-      proseSize === 'sm' && "prose-sm",
-      proseSize === 'base' && "prose-base",
-      proseSize === 'lg' && "prose-lg md:prose-xl",
-      proseSize === 'xl' && "prose-xl md:prose-2xl",
-      className
-    )}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-        {content || "_No content yet..._"}
-      </ReactMarkdown>
-    </div>
+    <>
+      <div className={cn(
+        "prose prose-slate dark:prose-invert max-w-none",
+        "prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight",
+        "prose-a:text-indigo-600 dark:prose-a:text-indigo-400 prose-a:no-underline hover:prose-a:underline font-medium",
+        "prose-blockquote:border-l-4 prose-blockquote:border-indigo-500 prose-blockquote:bg-indigo-500/5 prose-blockquote:px-6 prose-blockquote:py-1 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic",
+        "prose-pre:bg-slate-900 prose-pre:rounded-2xl prose-pre:shadow-xl prose-pre:border prose-pre:border-white/5",
+        "prose-img:rounded-2xl prose-img:shadow-lg",
+        proseSize === 'sm' && "prose-sm",
+        proseSize === 'base' && "prose-base",
+        proseSize === 'lg' && "prose-lg md:prose-xl",
+        proseSize === 'xl' && "prose-xl md:prose-2xl",
+        className
+      )}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+          {content || "_No content yet..._"}
+        </ReactMarkdown>
+      </div>
+      <ImageLightbox
+        open={lightbox.open}
+        src={lightbox.src}
+        svgContent={lightbox.svgContent}
+        alt={lightbox.alt}
+        onClose={closeLightbox}
+      />
+    </>
   );
 }

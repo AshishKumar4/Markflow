@@ -1,14 +1,20 @@
 /**
- * Core utilities for Multiple Entities sharing a single Durable Object class
- * DO NOT MODIFY THIS FILE - You may break the project functionality. STRICTLY DO NOT TOUCH
- * Look at the \`worker/entities.ts\` file for examples on how to use this library
+ * Core utilities — Durable Object abstraction layer.
+ *
+ * Provides a KV-style entity framework on top of a single GlobalDurableObject.
+ * Multiple entity types (documents, comments, etc.) share one DO class,
+ * each getting its own DO instance identified by a namespaced key.
+ *
+ * See `worker/entities.ts` for usage examples.
  */
 import type { ApiResponse } from "@shared/types";
-import { DurableObject } from "cloudflare:workers"; // DO NOT MODIFY THIS LINE. This is always already installed and available
+import { DurableObject } from "cloudflare:workers";
 import type { Context } from "hono";
+import type { ImageStoreDO } from "./image-store";
 
 export interface Env {
   GlobalDurableObject: DurableObjectNamespace<GlobalDurableObject>;
+  ImageStoreDO: DurableObjectNamespace<ImageStoreDO>;
 }
 
 type Doc<T> = { v: number; data: T };

@@ -1,3 +1,23 @@
+# Build outputs
+dist
+node_modules
 
-# Bootstrap marker
+# Environment & secrets
+.env
+.env.local
+.dev.vars
+
+# Cloudflare
+.wrangler
+
+# Cache & build artifacts
+.eslintcache
+tsconfig.tsbuildinfo
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Template marker (not used in open-source version)
 .bootstrap-complete

@@ -117,7 +117,7 @@ export function ViewPage() {
   );
   const showSidebar = !isMobile && sidebarOpen && !focusMode;
   return (
-    <div className={cn("h-screen flex flex-col overflow-hidden bg-background", focusMode && "bg-slate-50 dark:bg-slate-950")}>
+    <div className={cn("h-screen flex flex-col overflow-hidden bg-background print:h-auto print:overflow-visible print:bg-white", focusMode && "bg-slate-50 dark:bg-slate-950")}>
       <motion.div
         className="fixed top-0 left-0 right-0 h-1 bg-indigo-600 z-[100] origin-left print:hidden"
         style={{ scaleX: scrollProgress }}
@@ -180,7 +180,7 @@ export function ViewPage() {
           </motion.header>
         )}
       </AnimatePresence>
-      <main className="flex-1 overflow-hidden relative">
+      <main className="flex-1 overflow-hidden relative print:overflow-visible">
         {focusMode && (
           <div className="fixed top-6 right-6 z-[100] flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity print:hidden">
             <ThemeToggle className="static" />
@@ -197,7 +197,7 @@ export function ViewPage() {
         {/* Force re-render of panel group on sidebar toggle to avoid normalization artifacts */}
         <ResizablePanelGroup direction="horizontal" key={showSidebar ? 'sidebar-on' : 'sidebar-off'}>
           <ResizablePanel id="main-content" order={1} defaultSize={showSidebar ? 70 : 100} minSize={30} className="relative h-full">
-            <div className="h-full overflow-y-auto" ref={scrollContainerRef}>
+            <div className="h-full overflow-y-auto print:h-auto print:overflow-visible" ref={scrollContainerRef}>
               <div className={cn("max-w-3xl mx-auto px-6 py-12 md:py-24 transition-all duration-700", focusMode ? "max-w-4xl" : "")}>
                 <div className="mb-14">
                   <h1 className="text-4xl md:text-6xl font-display font-black mb-6 tracking-tight leading-tight">{doc.title}</h1>
@@ -229,8 +229,8 @@ export function ViewPage() {
           </ResizablePanel>
           {showSidebar && (
             <>
-              <ResizableHandle withHandle className="w-1 bg-border/40 hover:bg-indigo-500/20 transition-colors" />
-              <ResizablePanel id="comment-sidebar" order={2} defaultSize={30} minSize={20} maxSize={50} className="min-w-[320px]">
+              <ResizableHandle withHandle className="w-1 bg-border/40 hover:bg-indigo-500/20 transition-colors print:hidden" />
+              <ResizablePanel id="comment-sidebar" order={2} defaultSize={30} minSize={20} maxSize={50} className="min-w-[320px] print:hidden">
                 <CommentSidebar
                   isOpen={sidebarOpen}
                   onClose={() => setSidebarOpen(false)}

@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Save, Loader2, ArrowLeft, RotateCcw, FileText, Hash, Clock, CheckCircle2, CircleDashed } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, RotateCcw, FileText, Hash, Clock, CheckCircle2, CircleDashed, Images } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button } from '@/components/ui/button';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { api } from '@/lib/api-client';
+import { ImageUploadButton } from '@/components/image-upload-button';
+import { MediaLibraryDialog } from '@/components/media-library-dialog';
+import { api, uploadImage, imageUrl, safeAlt } from '@/lib/api-client';
 import type { MarkdownDoc } from '@shared/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 const DRAFT_KEY = 'markflow_draft';
+const MAX_CLIENT_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 export function EditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,6 +26,10 @@ export function EditorPage() {
   const [isLoading, setIsLoading] = useState(!!id);
   const [viewMode, setViewMode] = useState<'split' | 'write' | 'preview'>('split');
   const [hasDraft, setHasDraft] = useState(false);
+  const [mediaLibOpen, setMediaLibOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const dragCounterRef = useRef(0);
   const isDirty = useMemo(() => {
     return content !== lastSavedContent || title !== lastSavedTitle;
   }, [content, title, lastSavedContent, lastSavedTitle]);
@@ -120,6 +127,162 @@ export function EditorPage() {
       setHasDraft(false);
     }
   }, [id]);
+
+  /* ────── Image helpers ────── */
+
+  /**
+   * Insert markdown text at the current cursor position in the textarea.
+   * Uses functional setContent to avoid stale-closure issues with `content`.
+   */
+  const insertAtCursor = useCallback((markdown: string) => {
+    const el = textareaRef.current;
+
+    // If textarea is missing or hidden (e.g. preview mode), append to end
+    if (!el || el.offsetParent === null) {
+      setContent((prev) => prev + (prev.endsWith('\n') ? '' : '\n') + markdown + '\n');
+      return;
+    }
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+
+    setContent((prev) => {
+      const before = prev.slice(0, start);
+      const after = prev.slice(end);
+
+      // Ensure surrounding newlines for visual separation
+      const prefix = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+      const suffix = after.length > 0 && !after.startsWith('\n') ? '\n' : '';
+
+      return before + prefix + markdown + suffix + after;
+    });
+
+    // Restore cursor after the inserted text
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + markdown.length + 2; // rough estimate accounting for newlines
+      el.setSelectionRange(pos, pos);
+    });
+  }, []);
+
+  /**
+   * Upload one or more image Files in parallel and batch-insert all
+   * markdown at once to avoid stale-content issues with sequential inserts.
+   */
+  const handleImageFiles = useCallback(async (files: File[]) => {
+    // Filter to images, reject oversized files individually (don't abort entire batch)
+    const imageFiles = files.filter((f) => {
+      if (!f.type.startsWith('image/')) return false;
+      if (f.size > MAX_CLIENT_IMAGE_SIZE) {
+        toast.error(`${f.name} exceeds the 5 MB limit`);
+        return false;
+      }
+      if (f.size === 0) {
+        toast.error(`${f.name} is empty`);
+        return false;
+      }
+      return true;
+    });
+    if (imageFiles.length === 0) return;
+
+    const toastId = toast.loading(
+      imageFiles.length === 1
+        ? `Uploading ${imageFiles[0].name}...`
+        : `Uploading ${imageFiles.length} images...`,
+    );
+
+    try {
+      // Upload all files in parallel
+      const results = await Promise.allSettled(imageFiles.map((f) => uploadImage(f)));
+      toast.dismiss(toastId);
+
+      const lines: string[] = [];
+      let successCount = 0;
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          const meta = result.value;
+          const url = imageUrl(meta.id);
+          lines.push(`![${safeAlt(meta.filename)}](${url})`);
+          successCount++;
+        } else {
+          const msg = result.reason instanceof Error ? result.reason.message : 'Upload failed';
+          toast.error(msg);
+        }
+      }
+
+      if (lines.length > 0) {
+        insertAtCursor(lines.join('\n'));
+        toast.success(
+          successCount === 1
+            ? 'Image uploaded'
+            : `${successCount} images uploaded`,
+        );
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      toast.error(msg);
+    }
+  }, [insertAtCursor]);
+
+  /** Drag-and-drop handlers */
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith('image/'),
+    );
+    if (files.length > 0) handleImageFiles(files);
+  }, [handleImageFiles]);
+
+  /** Clipboard paste handler — intercepts image data only */
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter((item) => item.type.startsWith('image/'));
+    if (imageItems.length === 0) return; // Let default paste handle text
+
+    e.preventDefault();
+    const files = imageItems
+      .map((item, i) => {
+        const f = item.getAsFile();
+        if (!f) return null;
+        // Pasted images typically get generic names like "image.png" — make them descriptive
+        if (f.name === 'image.png' || f.name === 'image.jpeg' || f.name === 'blob') {
+          const ext = f.type.split('/')[1]?.replace('svg+xml', 'svg') || 'png';
+          return new File([f], `pasted-${Date.now()}-${i}.${ext}`, { type: f.type });
+        }
+        return f;
+      })
+      .filter((f): f is File => f !== null);
+    if (files.length > 0) handleImageFiles(files);
+  }, [handleImageFiles]);
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -171,6 +334,16 @@ export function EditorPage() {
               </Button>
             ))}
           </div>
+          <ImageUploadButton onInsert={insertAtCursor} className="rounded-full" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => setMediaLibOpen(true)}
+            aria-label="Open media library"
+          >
+            <Images className="w-4 h-4" />
+          </Button>
           <ThemeToggle className="static" />
           <Button onClick={handleSave} disabled={isSaving} className="btn-gradient rounded-full px-6 h-10 font-bold">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2 hidden sm:block" />}
@@ -192,16 +365,41 @@ export function EditorPage() {
         )}
       </AnimatePresence>
       <main className="flex-1 overflow-hidden flex flex-col md:flex-row relative">
-        <div className={cn("flex-1 overflow-y-auto flex flex-col", viewMode === 'preview' ? "hidden lg:flex" : "flex", viewMode === 'write' ? "w-full" : "w-full md:w-1/2")}>
+        <div
+          className={cn("flex-1 overflow-y-auto flex flex-col relative", viewMode === 'preview' ? "hidden lg:flex" : "flex", viewMode === 'write' ? "w-full" : "w-full md:w-1/2")}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <div className={cn("flex-1 px-4 pt-10 pb-32 md:pb-10 md:px-8 lg:px-12", viewMode === 'write' ? "max-w-4xl mx-auto w-full" : "")}>
             <TextareaAutosize
+              ref={textareaRef}
               autoFocus
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onPaste={handlePaste}
               placeholder="# Start writing..."
               className="w-full min-h-full resize-none bg-transparent border-none focus:ring-0 font-mono text-base md:text-lg leading-relaxed placeholder:text-muted-foreground/20"
             />
           </div>
+
+          {/* Drag-and-drop overlay */}
+          <AnimatePresence>
+            {isDragging && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-50 flex items-center justify-center bg-indigo-500/10 backdrop-blur-[2px] border-2 border-dashed border-indigo-500 rounded-xl m-2 pointer-events-none"
+              >
+                <div className="flex flex-col items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <Images className="w-10 h-10" />
+                  <p className="text-sm font-bold">Drop images here to upload</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <div className={cn("flex-1 overflow-y-auto bg-slate-50/30 dark:bg-slate-900/10 border-l border-border", viewMode === 'write' ? "hidden lg:flex" : "flex", viewMode === 'preview' ? "w-full" : "w-full md:w-1/2")}>
           <div className={cn("flex-1 px-6 pt-10 pb-32 md:pb-10 md:px-12 lg:px-16", viewMode === 'preview' ? "max-w-4xl mx-auto w-full" : "")}>
@@ -224,6 +422,13 @@ export function EditorPage() {
           </Button>
         ))}
       </div>
+
+      {/* Media Library Dialog */}
+      <MediaLibraryDialog
+        open={mediaLibOpen}
+        onOpenChange={setMediaLibOpen}
+        onInsert={insertAtCursor}
+      />
     </div>
   );
 }
