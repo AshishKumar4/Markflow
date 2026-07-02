@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Edit3, ArrowLeft, Loader2, Copy, Check, ChevronRight, Home, Clock, MessageSquarePlus, ArrowUp, Printer, Sidebar as SidebarIcon, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,8 +8,13 @@ import { MarkdownPreview } from '@/components/markdown-preview';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CommentSidebar } from '@/components/comments/comment-sidebar';
 import { api } from '@/lib/api-client';
+import {
+  buildMarkdownBlocks,
+  createCommentPositionFromSelection,
+  resolveCommentAnchors,
+} from '@/lib/comment-anchors';
 import { cn, getScrollPercentage, copyToClipboard } from '@/lib/utils';
-import type { MarkdownDoc, Comment } from '@shared/types';
+import type { MarkdownDoc, Comment, CommentPosition } from '@shared/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -23,7 +28,7 @@ export function ViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [selection, setSelection] = useState<{ text: string; index: number } | null>(null);
+  const [selection, setSelection] = useState<CommentPosition | null>(null);
   const [showAnnotate, setShowAnnotate] = useState(false);
   const [annotatePos, setAnnotatePos] = useState({ x: 0, y: 0 });
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
@@ -31,8 +36,21 @@ export function ViewPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [focusMode, setFocusMode] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const blocks = useMemo(() => buildMarkdownBlocks(doc?.content ?? ''), [doc?.content]);
+  const blocksByKey = useMemo(() => new Map(blocks.map((block) => [block.key, block])), [blocks]);
+  const anchorResolution = useMemo(() => resolveCommentAnchors(comments, blocks), [comments, blocks]);
+  const anchoredIds = anchorResolution.anchoredIds;
+
+  const getClosestBlockElement = useCallback((node: Node | null): HTMLElement | null => {
+    if (!node) return null;
+    if (node instanceof HTMLElement) {
+      return node.closest('[data-mf-block-key]');
+    }
+    return node.parentElement?.closest('[data-mf-block-key]') ?? null;
+  }, []);
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
@@ -57,10 +75,28 @@ export function ViewPage() {
     const handleMouseUp = () => {
       const sel = window.getSelection();
       if (sel && sel.toString().trim() && contentRef.current?.contains(sel.anchorNode)) {
+        if (sel.rangeCount === 0) {
+          setShowAnnotate(false);
+          return;
+        }
         const range = sel.getRangeAt(0);
+        const startBlock = getClosestBlockElement(range.startContainer);
+        const endBlock = getClosestBlockElement(range.endContainer);
+        if (!startBlock || !endBlock || startBlock !== endBlock) {
+          setSelection(null);
+          setShowAnnotate(false);
+          return;
+        }
+
+        const nextSelection = createCommentPositionFromSelection(range, startBlock, blocksByKey);
+        if (!nextSelection) {
+          setSelection(null);
+          setShowAnnotate(false);
+          return;
+        }
+
         const rect = range.getBoundingClientRect();
-        setSelection({ text: sel.toString().trim(), index: range.startOffset });
-        // Fixed positioning uses viewport coordinates, rect.top is already viewport-relative
+        setSelection(nextSelection);
         setAnnotatePos({ x: rect.left + rect.width / 2, y: rect.top - 48 });
         setShowAnnotate(true);
       } else {
@@ -83,14 +119,46 @@ export function ViewPage() {
         container.removeEventListener('scroll', handleScroll);
       }
     };
-  }, []);
+  }, [blocksByKey, getClosestBlockElement]);
   const readingTime = useMemo(() => {
     if (!doc?.content) return 0;
     const words = doc.content.trim().split(/\s+/).length;
     return Math.max(1, Math.ceil(words / 200));
   }, [doc?.content]);
+
+  const handleCreateComment = useCallback(async (input: {
+    content: string;
+    authorName?: string;
+    authorEmail?: string;
+    parentId?: string;
+    position?: CommentPosition;
+  }) => {
+    if (!doc) throw new Error('Document not loaded');
+
+    const newComment = await api<Comment>(`/api/comments/${doc.id}`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+
+    setComments((previous) => [...previous, newComment]);
+    if (newComment.position) {
+      setActiveCommentId(newComment.id);
+    }
+    setSidebarOpen(true);
+    return newComment;
+  }, [doc]);
+
+  const handleDeleteComment = useCallback(async (commentId: string) => {
+    if (!doc) throw new Error('Document not loaded');
+
+    await api(`/api/comments/${doc.id}/${commentId}`, { method: 'DELETE' });
+    setComments((previous) => previous.filter((comment) => comment.id !== commentId));
+    setActiveCommentId((previous) => (previous === commentId ? null : previous));
+  }, [doc]);
+
   const handleAnnotate = () => {
     setSidebarOpen(true);
+    if (isMobile) setMobileDrawerOpen(true);
     setShowAnnotate(false);
   };
   const handleIndicatorClick = (cid: string) => {
@@ -98,7 +166,35 @@ export function ViewPage() {
     setSelection(null);
     setActiveCommentId(cid);
     setSidebarOpen(true);
+    if (isMobile) setMobileDrawerOpen(true);
   };
+
+  const handleJumpToComment = useCallback((cid: string) => {
+    setActiveCommentId(cid);
+    setSidebarOpen(true);
+    if (isMobile) setMobileDrawerOpen(false);
+
+    const reduceMotion = typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    // Give the DOM a tick to update the active class / drawer state.
+    const run = () => {
+      const container = contentRef.current;
+      if (!container) return;
+      const escaped = (window as any).CSS?.escape ? (window as any).CSS.escape(cid) : cid.replace(/"/g, '\\"');
+      const el = container.querySelector<HTMLElement>(`[data-comment-ids~="${escaped}"]`);
+      if (!el) {
+        toast.info("The annotated text can no longer be located in the document.");
+        return;
+      }
+      el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      el.classList.add('mf-comment-flash');
+      window.setTimeout(() => {
+        el?.classList.remove('mf-comment-flash');
+      }, 1600);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  }, [isMobile]);
   const handleCopyLink = async () => {
     const success = await copyToClipboard(window.location.href);
     if (success) {
@@ -209,6 +305,8 @@ export function ViewPage() {
                 <div ref={contentRef} className="print:text-black mb-48">
                   <MarkdownPreview
                     content={doc.content}
+                    blocks={blocks}
+                    anchorResolution={anchorResolution}
                     proseSize={focusMode ? "xl" : "lg"}
                     comments={comments}
                     activeCommentId={activeCommentId}
@@ -234,11 +332,15 @@ export function ViewPage() {
                 <CommentSidebar
                   isOpen={sidebarOpen}
                   onClose={() => setSidebarOpen(false)}
-                  docId={doc.id}
+                  comments={comments}
                   selection={selection}
                   onClearSelection={() => setSelection(null)}
                   activeCommentId={activeCommentId}
                   onClearActive={() => setActiveCommentId(null)}
+                  onJumpTo={handleJumpToComment}
+                  anchoredIds={anchoredIds}
+                  onCreateComment={handleCreateComment}
+                  onDeleteComment={handleDeleteComment}
                 />
               </ResizablePanel>
             </>
@@ -246,7 +348,7 @@ export function ViewPage() {
         </ResizablePanelGroup>
       </main>
       {isMobile && !focusMode && (
-        <Drawer>
+        <Drawer open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
           <DrawerTrigger asChild>
             <Button size="icon" className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-2xl btn-gradient z-50">
               <MessageSquarePlus className="w-6 h-6" />
@@ -259,12 +361,16 @@ export function ViewPage() {
             <div className="overflow-y-auto px-4 pb-10">
               <CommentSidebar
                 isOpen={true}
-                onClose={() => {}}
-                docId={doc.id}
+                onClose={() => setMobileDrawerOpen(false)}
+                comments={comments}
                 selection={selection}
                 onClearSelection={() => setSelection(null)}
                 activeCommentId={activeCommentId}
                 onClearActive={() => setActiveCommentId(null)}
+                onJumpTo={handleJumpToComment}
+                anchoredIds={anchoredIds}
+                onCreateComment={handleCreateComment}
+                onDeleteComment={handleDeleteComment}
               />
             </div>
           </DrawerContent>

@@ -15,6 +15,33 @@ export interface MarkdownDoc {
 }
 
 /** A comment on a document, optionally anchored to highlighted text. */
+export interface CommentQuoteAnchor {
+  exact?: string;
+  prefix?: string;
+  suffix?: string;
+}
+
+export interface CommentBlockAnchor {
+  key?: string;
+  index?: number;
+  start?: number;
+  end?: number;
+  fingerprint?: string;
+}
+
+export interface CommentDocumentAnchor {
+  start?: number;
+  end?: number;
+}
+
+export interface CommentPosition {
+  text?: string;
+  index?: number;
+  quote?: CommentQuoteAnchor;
+  block?: CommentBlockAnchor;
+  document?: CommentDocumentAnchor;
+}
+
 export interface Comment {
   id: string;
   docId: string;
@@ -22,10 +49,7 @@ export interface Comment {
   authorName?: string;
   authorEmail?: string;
   content: string;
-  position?: {
-    text?: string;
-    index?: number;
-  };
+  position?: CommentPosition;
   createdAt: number;
   updatedAt: number;
 }

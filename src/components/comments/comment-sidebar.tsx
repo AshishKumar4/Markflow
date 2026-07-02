@@ -1,27 +1,43 @@
 import React, { useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, MessageSquare, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CommentSection } from './comment-section';
 import { cn } from '@/lib/utils';
+import type { Comment, CommentPosition } from '@shared/types';
+
 interface CommentSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  docId: string;
-  selection?: { text: string; index: number } | null;
+  comments: Comment[];
+  selection?: CommentPosition | null;
   onClearSelection?: () => void;
   activeCommentId?: string | null;
   onClearActive?: () => void;
+  onJumpTo?: (commentId: string) => void;
+  anchoredIds?: Set<string>;
+  onCreateComment: (input: {
+    content: string;
+    authorName?: string;
+    authorEmail?: string;
+    parentId?: string;
+    position?: CommentPosition;
+  }) => Promise<Comment>;
+  onDeleteComment: (commentId: string) => Promise<void>;
 }
 export function CommentSidebar({
   isOpen,
   onClose,
-  docId,
+  comments,
   selection,
   onClearSelection,
   activeCommentId,
-  onClearActive
+  onClearActive,
+  onJumpTo,
+  anchoredIds,
+  onCreateComment,
+  onDeleteComment,
 }: CommentSidebarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   if (!isOpen) return null;
@@ -60,12 +76,15 @@ export function CommentSidebar({
       <ScrollArea className="flex-1">
         <div className="p-4" ref={containerRef}>
           <CommentSection
-            docId={docId}
+            comments={comments}
             sidebarMode
             selection={selection}
             onClearSelection={onClearSelection}
             activeCommentId={activeCommentId}
-            onClearActive={onClearActive}
+            onJumpTo={onJumpTo}
+            anchoredIds={anchoredIds}
+            onCreateComment={onCreateComment}
+            onDeleteComment={onDeleteComment}
           />
         </div>
       </ScrollArea>

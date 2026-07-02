@@ -60,6 +60,61 @@
     -webkit-text-fill-color: transparent;
   }
 }
+/* ─── Comment annotation highlight ─────────────────────────────── */
+/* Override <mark>'s user-agent yellow + prose typography defaults,
+   and give every annotated span a subtle, readable indigo wash that
+   works in both light and dark themes. */
+mark.mf-comment-mark,
+.prose mark.mf-comment-mark,
+.prose-invert mark.mf-comment-mark {
+  background-color: rgba(99, 102, 241, 0.14) !important;
+  color: inherit !important;
+}
+mark.mf-comment-mark:hover,
+.prose mark.mf-comment-mark:hover {
+  background-color: rgba(99, 102, 241, 0.26) !important;
+}
+mark.mf-comment-mark-active,
+.prose mark.mf-comment-mark-active {
+  background-color: rgba(99, 102, 241, 0.32) !important;
+}
+.dark mark.mf-comment-mark,
+.dark .prose-invert mark.mf-comment-mark {
+  background-color: rgba(129, 140, 248, 0.18) !important;
+}
+.dark mark.mf-comment-mark:hover,
+.dark .prose-invert mark.mf-comment-mark:hover {
+  background-color: rgba(129, 140, 248, 0.32) !important;
+}
+.dark mark.mf-comment-mark-active,
+.dark .prose-invert mark.mf-comment-mark-active {
+  background-color: rgba(129, 140, 248, 0.42) !important;
+}
+
+@keyframes mf-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0);    background-color: rgba(99,102,241,0.45) !important; }
+  25%  { box-shadow: 0 0 0 6px rgba(99,102,241,0.40); background-color: rgba(99,102,241,0.55) !important; }
+  60%  { box-shadow: 0 0 0 4px rgba(99,102,241,0.20); background-color: rgba(99,102,241,0.35) !important; }
+  100% { box-shadow: 0 0 0 0 rgba(99,102,241,0);    background-color: rgba(99,102,241,0.14) !important; }
+}
+.mf-comment-flash {
+  animation: mf-flash 1.4s ease-out 1;
+  border-radius: 0.25rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mf-comment-flash { animation: none; }
+}
+
+/* Keep annotation highlights light and neutral when printing. */
+@media print {
+  mark.mf-comment-mark,
+  .prose mark.mf-comment-mark {
+    background-color: transparent !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+}
+
 /* Syntax-highlighted markdown code blocks */
 .prose pre code {
   color: #e2e8f0;
