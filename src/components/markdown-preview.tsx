@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import type { Comment } from '@shared/types';
@@ -176,7 +177,11 @@ export function MarkdownPreview({
         proseSize === 'xl' && "prose-xl md:prose-2xl",
         className
       )}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[[rehypeHighlight, { ignoreMissing: true, plainText: ['mermaid'] }]]}
+          components={components}
+        >
           {content || "_No content yet..._"}
         </ReactMarkdown>
       </div>
